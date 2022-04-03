@@ -101,3 +101,36 @@ EqExp       ::= RelExp | EqExp ("==" | "!=") RelExp;
 LAndExp     ::= EqExp | LAndExp "&&" EqExp;
 LOrExp      ::= LAndExp | LOrExp "||" LAndExp;
 
+
+        myexp[0] = "%";
+        strcat(myexp, to_string(*exp_depth).c_str());
+        *exp_depth ++;
+
+
+
+      int ttype;
+      char exp1[10];
+      char exp2[10];
+      ttype = cur_num.top();
+      cur_num.pop();
+      if(ttype == -1){
+        strcpy(exp1, to_string(imm_stack.top()).c_str());
+        imm_stack.pop();
+      }
+      else{
+        exp1[0] = '%';
+        strcat(exp1, to_string(ttype).c_str());
+      }
+      if(ttype == -1){
+        strcpy(exp2, to_string(imm_stack.top()).c_str());
+        imm_stack.pop();
+      }
+      else{
+        exp2[0] = '%';
+        strcat(exp2, to_string(ttype).c_str());
+      }
+      exp_depth += 1;
+      char myexp[10];
+      myexp[0] = '%';
+      strcat(myexp, to_string(exp_depth).c_str());
+      
