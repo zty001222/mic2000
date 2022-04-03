@@ -82,6 +82,7 @@ class StmtAST : public BaseAST{
       exp->Dump(fout,koopa_str);
       strcat(koopa_str, "  ret ");
       char exp1[10];
+      memset(exp1,0,sizeof(exp1));
       int ttype = cur_num.top();
       cur_num.pop();
       if(ttype == -1){
@@ -169,7 +170,7 @@ class LOrExpAST : public BaseAST{
       strcat(koopa_str, "  ");
       strcat(koopa_str, myexp2);
       strcat(koopa_str, " = ne 0, ");
-      strcat(koopa_str, exp1);
+      strcat(koopa_str, exp2);
       strcat(koopa_str, "\n");
 
       strcat(koopa_str, "  ");
@@ -243,7 +244,7 @@ class LAndExpAST : public BaseAST{
       strcat(koopa_str, "  ");
       strcat(koopa_str, myexp2);
       strcat(koopa_str, " = ne 0, ");
-      strcat(koopa_str, exp1);
+      strcat(koopa_str, exp2);
       strcat(koopa_str, "\n");
 
       strcat(koopa_str, "  ");
@@ -564,6 +565,7 @@ class UnaryExpAST : public BaseAST{
         int ttype = cur_num.top();
         cur_num.pop();
         char exp1[10];
+        memset(exp1,0,sizeof(exp1));
         if(ttype == -1){
           strcpy(exp1, to_string(imm_stack.top()).c_str());
           imm_stack.pop();

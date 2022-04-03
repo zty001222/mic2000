@@ -19,6 +19,12 @@ extern int yyparse(std::unique_ptr<BaseAST> &ast);
 char koopa_str[1000];
 char asm_out[1000];
 
+stack<int> calstack;
+
+char regs[7][3] = {"t0","t1","t2","t3","t4","t5","t6"};
+bool used[7] = {0,0,0,0,0,0,0};
+char us[7][3];
+
 void Visit(const koopa_raw_program_t &program);
 void Visit(const koopa_raw_slice_t &slice);
 void Visit(const koopa_raw_function_t &func);
@@ -26,7 +32,19 @@ void Visit(const koopa_raw_basic_block_t &bb);
 void Visit(const koopa_raw_value_t &value);
 void Visit(const koopa_raw_integer_t &intval);
 void Visit(const koopa_raw_return_t &ret);
+void Visit(const koopa_raw_binary_t &bin);
+void Visit(const koopa_raw_binary_op_t &op);
+void show_usable_regs();
 void deal_with_IR(const char * str);
+
+void show_usable_regs(){
+  cout<<"usable regs:";
+  for(int i = 0 ; i < 7 ; i ++){
+    if(used[i] == 0)
+      cout<<i<<" ";
+  }
+  cout<<endl;
+}
 
 
 int main(int argc, const char *argv[]) {
@@ -109,6 +127,8 @@ void Visit(const koopa_raw_program_t &program) {
 
 // 访问 raw slice
 void Visit(const koopa_raw_slice_t &slice) {
+  show_usable_regs();
+  cout<<"in slice"<<endl;
   for (size_t i = 0; i < slice.len; ++i) {
     std::cout<<"in slice "<<i<<endl;
     auto ptr = slice.buffer[i];
@@ -138,26 +158,27 @@ void Visit(const koopa_raw_slice_t &slice) {
 
 // 访问函数
 void Visit(const koopa_raw_function_t &func) {
+  cout<<"in func"<<endl;
   // 执行一些其他的必要操作
   strcat(asm_out, "  .globl main\nmain:\n");
   // 访问所有基本块
-  for(int i = 0 ; i < func->bbs.len ; i++)
-    Visit(func->bbs);
+  Visit(func->bbs);
 }
 
 // 访问基本块
 void Visit(const koopa_raw_basic_block_t &bb) {
+  cout<<"in block"<<endl;
   // 执行一些其他的必要操作
   std::cout<<"in visit block, instlen:"<<bb->insts.len<<" paramslen:"<<bb->params.len<<endl;
   // 访问所有指令
-  for(int i = 0 ; i < bb->insts.len ; i++)
-    Visit(bb->insts);
-  for(int i = 0 ; i < bb->params.len ; i++)
-    Visit(bb->params);
+  Visit(bb->insts);
+  Visit(bb->params);
 }
 
 // 访问指令
 void Visit(const koopa_raw_value_t &value) {
+  show_usable_regs();
+  cout<<"in value"<<endl;
   // 根据指令类型判断后续需要如何访问
   const auto &kind = value->kind;
   switch (kind.tag) {
@@ -171,6 +192,23 @@ void Visit(const koopa_raw_value_t &value) {
       // 访问 integer 指令
       Visit(kind.data.integer);
       break;
+    case KOOPA_RVT_AGGREGATE:
+      std::cout<<"in visit ref"<<endl;
+      break;
+    case KOOPA_RVT_FUNC_ARG_REF:
+      std::cout<<"in visit ref"<<endl;
+      break;
+    case KOOPA_RVT_BINARY:
+      std::cout<<"in visit bin"<<endl;
+      Visit(kind.data.binary);
+      break;
+    case KOOPA_RVT_BLOCK_ARG_REF:
+      std::cout<<"in visit blockarg"<<endl;
+      break;
+    case KOOPA_RVT_GET_PTR:
+      std::cout<<"in visit eleptr"<<endl;
+      break;
+
     default:
       // 其他类型暂时遇不到
       assert(false);
@@ -179,13 +217,417 @@ void Visit(const koopa_raw_value_t &value) {
 void Visit(const koopa_raw_integer_t &intval){
   std::cout<<"in integer"<<endl;
   cout<<intval.value<<endl;
-  strcat(asm_out,"  li a0, ");
-  strcat(asm_out, to_string(intval.value).c_str());
-  strcat(asm_out, "\n");
+  for(int i = 0 ; i < 7 ; i ++){
+    if(used[i] == 0){
+      used[i] = 1;
+      strcat(asm_out,"  li t");
+      strcat(asm_out,to_string(i).c_str());
+      strcat(asm_out,", ");
+      strcat(asm_out, to_string(intval.value).c_str());
+      strcat(asm_out, "\n");
+      calstack.push(i);
+      break;
+    }
+  }
 }
 
 void Visit(const koopa_raw_return_t &ret){
-  Visit(ret.value);
   cout<<"in ret"<<endl;
+  if(calstack.empty()){
+    Visit(ret.value);
+  }
+  int p1 = calstack.top();
+  calstack.pop();
+  strcat(asm_out,"  add a0, a0");
+  strcat(asm_out,", t");
+  strcat(asm_out,to_string(p1).c_str());
+  strcat(asm_out,"\n");
+  used[p1] = 0;
   strcat(asm_out,"  ret\n");
+}
+
+void Visit(const koopa_raw_binary_t &bin){
+  cout<<"in bin"<<endl;
+  cout<<bin.rhs->name<<endl;
+  if(bin.rhs->kind.tag != KOOPA_RVT_BINARY){
+    Visit(bin.rhs);
+  }
+  if(bin.lhs->kind.tag != KOOPA_RVT_BINARY){
+    Visit(bin.lhs);
+  }
+  Visit(bin.op);
+}
+
+void Visit(const koopa_raw_binary_op_t &op){
+  cout<<"in bin op"<<endl;
+  switch(op){
+    case KOOPA_RBO_NOT_EQ:{
+      cout<<"in neq"<<endl;
+      strcat(asm_out,"  sub");
+      int p1 = calstack.top();
+      calstack.pop();
+      int p2 = calstack.top();
+      strcat(asm_out," t");
+      strcat(asm_out,to_string(p2).c_str());
+      strcat(asm_out,", t");
+      strcat(asm_out,to_string(p1).c_str());
+      strcat(asm_out,", t");
+      strcat(asm_out,to_string(p2).c_str());
+      strcat(asm_out,"\n");
+
+      strcat(asm_out,"  snez");
+      strcat(asm_out," t");
+      strcat(asm_out,to_string(p2).c_str());
+      strcat(asm_out,", t");
+      strcat(asm_out,to_string(p2).c_str());
+      strcat(asm_out,"\n");
+      used[p1] = 0;
+      break;
+    }
+    /// Equal to.
+    case KOOPA_RBO_EQ:{
+      cout<<"in eq"<<endl;
+      int p1 = calstack.top();
+      calstack.pop();
+      int p2 = calstack.top();
+      strcat(asm_out,"  sub");
+      strcat(asm_out," t");
+      strcat(asm_out,to_string(p2).c_str());
+      strcat(asm_out,", t");
+      strcat(asm_out,to_string(p1).c_str());
+      strcat(asm_out,", t");
+      strcat(asm_out,to_string(p2).c_str());
+      strcat(asm_out,"\n");
+
+
+      strcat(asm_out,"  seqz");
+      strcat(asm_out," t");
+      strcat(asm_out,to_string(p2).c_str());
+      strcat(asm_out,", t");
+      strcat(asm_out,to_string(p2).c_str());
+      strcat(asm_out,"\n");
+      used[p1] = 0;
+      break;
+    }
+    break;
+    /// Greater than.
+    case KOOPA_RBO_GT:{
+      cout<<"in gt"<<endl;
+      strcat(asm_out,"  sgt");
+      int p1 = calstack.top();
+      calstack.pop();
+      int p2 = calstack.top();
+      strcat(asm_out," t");
+      strcat(asm_out,to_string(p2).c_str());
+      strcat(asm_out,", t");
+      strcat(asm_out,to_string(p1).c_str());
+      strcat(asm_out,", t");
+      strcat(asm_out,to_string(p2).c_str());
+      strcat(asm_out,"\n");
+      used[p1] = 0;
+      break;
+    }
+    break;
+    /// Less than.
+    case KOOPA_RBO_LT:{
+      cout<<"in lt"<<endl;
+      strcat(asm_out,"  slt");
+      int p1 = calstack.top();
+      calstack.pop();
+      int p2 = calstack.top();
+      strcat(asm_out," t");
+      strcat(asm_out,to_string(p2).c_str());
+      strcat(asm_out,", t");
+      strcat(asm_out,to_string(p1).c_str());
+      strcat(asm_out,", t");
+      strcat(asm_out,to_string(p2).c_str());
+      strcat(asm_out,"\n");
+      used[p1] = 0;
+      break;
+    }
+    break;
+    /// Greater than or 2qual to.
+    case KOOPA_RBO_GE:{
+      cout<<"in ge"<<endl;
+      int tmp1 = 0;
+      for(int i = 0 ; i < 7 ; i ++){
+        if(used[i] == 0){
+          used[i] = 1;
+          tmp1 = i;
+          break;
+        }
+      }
+      strcat(asm_out,"  sgt");
+      int p1 = calstack.top();
+      calstack.pop();
+      int p2 = calstack.top();
+      strcat(asm_out," t");
+      strcat(asm_out,to_string(tmp1).c_str());
+      strcat(asm_out,", t");
+      strcat(asm_out,to_string(p1).c_str());
+      strcat(asm_out,", t");
+      strcat(asm_out,to_string(p2).c_str());
+      strcat(asm_out,"\n");
+
+      strcat(asm_out,"  sub");
+      strcat(asm_out," t");
+      strcat(asm_out,to_string(p2).c_str());
+      strcat(asm_out,", t");
+      strcat(asm_out,to_string(p1).c_str());
+      strcat(asm_out,", t");
+      strcat(asm_out,to_string(p2).c_str());
+      strcat(asm_out,"\n");
+
+      strcat(asm_out,"  seqz");
+      strcat(asm_out," t");
+      strcat(asm_out,to_string(p2).c_str());
+      strcat(asm_out,", t");
+      strcat(asm_out,to_string(p2).c_str());
+      strcat(asm_out,"\n");
+
+      strcat(asm_out,"  or");
+      strcat(asm_out," t");
+      strcat(asm_out,to_string(p2).c_str());
+      strcat(asm_out,", t");
+      strcat(asm_out,to_string(tmp1).c_str());
+      strcat(asm_out,", t");
+      strcat(asm_out,to_string(p2).c_str());
+      strcat(asm_out,"\n");
+      used[p1] = 0;
+      used[tmp1] = 0;
+      break;
+    }
+    break;
+    /// Less than or equal to.
+    case KOOPA_RBO_LE:{
+      cout<<"in le"<<endl;
+      int tmp1 = 0;
+      for(int i = 0 ; i < 7 ; i ++){
+        if(used[i] == 0){
+          used[i] = 1;
+          tmp1 = i;
+          break;
+        }
+      }
+      strcat(asm_out,"  slt");
+      int p1 = calstack.top();
+      calstack.pop();
+      int p2 = calstack.top();
+      strcat(asm_out," t");
+      strcat(asm_out,to_string(tmp1).c_str());
+      strcat(asm_out,", t");
+      strcat(asm_out,to_string(p1).c_str());
+      strcat(asm_out,", t");
+      strcat(asm_out,to_string(p2).c_str());
+      strcat(asm_out,"\n");
+
+      strcat(asm_out,"  sub");
+      strcat(asm_out," t");
+      strcat(asm_out,to_string(p2).c_str());
+      strcat(asm_out,", t");
+      strcat(asm_out,to_string(p1).c_str());
+      strcat(asm_out,", t");
+      strcat(asm_out,to_string(p2).c_str());
+      strcat(asm_out,"\n");
+
+      strcat(asm_out,"  seqz");
+      strcat(asm_out," t");
+      strcat(asm_out,to_string(p2).c_str());
+      strcat(asm_out,", t");
+      strcat(asm_out,to_string(p2).c_str());
+      strcat(asm_out,"\n");
+
+      strcat(asm_out,"  or");
+      strcat(asm_out," t");
+      strcat(asm_out,to_string(p2).c_str());
+      strcat(asm_out,", t");
+      strcat(asm_out,to_string(tmp1).c_str());
+      strcat(asm_out,", t");
+      strcat(asm_out,to_string(p2).c_str());
+      strcat(asm_out,"\n");
+      used[p1] = 0;
+      used[tmp1] = 0;
+      break;
+    }
+    break;
+    /// Addition.
+    case KOOPA_RBO_ADD:{
+      cout<<"in add"<<endl;
+      strcat(asm_out,"  add");
+      int p1 = calstack.top();
+      calstack.pop();
+      int p2 = calstack.top();
+      strcat(asm_out," t");
+      strcat(asm_out,to_string(p2).c_str());
+      strcat(asm_out,", t");
+      strcat(asm_out,to_string(p1).c_str());
+      strcat(asm_out,", t");
+      strcat(asm_out,to_string(p2).c_str());
+      strcat(asm_out,"\n");
+      used[p1] = 0;
+      break;
+    }
+    /// Subtraction.
+    case KOOPA_RBO_SUB:{
+      cout<<"in sub"<<endl;
+      strcat(asm_out,"  sub");
+      int p1 = calstack.top();
+      calstack.pop();
+      int p2 = calstack.top();
+      strcat(asm_out," t");
+      strcat(asm_out,to_string(p2).c_str());
+      strcat(asm_out,", t");
+      strcat(asm_out,to_string(p1).c_str());
+      strcat(asm_out,", t");
+      strcat(asm_out,to_string(p2).c_str());
+      strcat(asm_out,"\n");
+      used[p1] = 0;
+      break;
+    }
+    break;
+    /// Multiplication.
+    case KOOPA_RBO_MUL:{
+      cout<<"in mul"<<endl;
+      strcat(asm_out,"  mul");
+      int p1 = calstack.top();
+      calstack.pop();
+      int p2 = calstack.top();
+      strcat(asm_out," t");
+      strcat(asm_out,to_string(p2).c_str());
+      strcat(asm_out,", t");
+      strcat(asm_out,to_string(p1).c_str());
+      strcat(asm_out,", t");
+      strcat(asm_out,to_string(p2).c_str());
+      strcat(asm_out,"\n");
+      used[p1] = 0;
+      break;
+    }
+    break;
+    /// Division.
+    case KOOPA_RBO_DIV:{
+      cout<<"in div"<<endl;
+      strcat(asm_out,"  div");
+      int p1 = calstack.top();
+      calstack.pop();
+      int p2 = calstack.top();
+      strcat(asm_out," t");
+      strcat(asm_out,to_string(p2).c_str());
+      strcat(asm_out,", t");
+      strcat(asm_out,to_string(p1).c_str());
+      strcat(asm_out,", t");
+      strcat(asm_out,to_string(p2).c_str());
+      strcat(asm_out,"\n");
+      used[p1] = 0;
+      break;
+    }
+    break;
+    /// Modulo.
+    case KOOPA_RBO_MOD:{
+      cout<<"in mod"<<endl;
+      int tmp1 = 0;
+      for(int i = 0 ; i < 7 ; i ++){
+        if(used[i] == 0){
+          used[i] = 1;
+          tmp1 = i;
+          break;
+        }
+      }
+      strcat(asm_out,"  div");
+      int p1 = calstack.top();
+      calstack.pop();
+      int p2 = calstack.top();
+      strcat(asm_out," t");
+      strcat(asm_out,to_string(tmp1).c_str());
+      strcat(asm_out,", t");
+      strcat(asm_out,to_string(p1).c_str());
+      strcat(asm_out,", t");
+      strcat(asm_out,to_string(p2).c_str());
+      strcat(asm_out,"\n");
+      
+      strcat(asm_out,"  mul");
+      strcat(asm_out," t");
+      strcat(asm_out,to_string(p2).c_str());
+      strcat(asm_out,", t");
+      strcat(asm_out,to_string(p2).c_str());
+      strcat(asm_out,", t");
+      strcat(asm_out,to_string(tmp1).c_str());
+      strcat(asm_out,"\n");
+
+      strcat(asm_out,"  sub");
+      strcat(asm_out," t");
+      strcat(asm_out,to_string(p2).c_str());
+      strcat(asm_out,", t");
+      strcat(asm_out,to_string(p1).c_str());
+      strcat(asm_out,", t");
+      strcat(asm_out,to_string(p2).c_str());
+      strcat(asm_out,"\n");
+      used[p1] = 0;
+      used[tmp1] = 0;
+      break;
+    }
+    break;
+    /// Bitwise AND.
+    case KOOPA_RBO_AND:{
+      cout<<"in and"<<endl;
+      strcat(asm_out,"  and");
+      int p1 = calstack.top();
+      calstack.pop();
+      int p2 = calstack.top();
+      strcat(asm_out," t");
+      strcat(asm_out,to_string(p2).c_str());
+      strcat(asm_out,", t");
+      strcat(asm_out,to_string(p1).c_str());
+      strcat(asm_out,", t");
+      strcat(asm_out,to_string(p2).c_str());
+      strcat(asm_out,"\n");
+      used[p1] = 0;
+      break;
+    }
+    break;
+    /// Bitwise OR.
+    case KOOPA_RBO_OR:{
+      cout<<"in or"<<endl;
+      strcat(asm_out,"  or");
+      int p1 = calstack.top();
+      calstack.pop();
+      int p2 = calstack.top();
+      strcat(asm_out," t");
+      strcat(asm_out,to_string(p2).c_str());
+      strcat(asm_out,", t");
+      strcat(asm_out,to_string(p1).c_str());
+      strcat(asm_out,", t");
+      strcat(asm_out,to_string(p2).c_str());
+      strcat(asm_out,"\n");
+      used[p1] = 0;
+      break;
+    }
+    break;
+    /// Bitwise XOR.
+    case KOOPA_RBO_XOR:{
+      cout<<"in xor"<<endl;
+      strcat(asm_out,"  xor");
+      int p1 = calstack.top();
+      calstack.pop();
+      int p2 = calstack.top();
+      strcat(asm_out," t");
+      strcat(asm_out,to_string(p2).c_str());
+      strcat(asm_out,", t");
+      strcat(asm_out,to_string(p1).c_str());
+      strcat(asm_out,", t");
+      strcat(asm_out,to_string(p2).c_str());
+      strcat(asm_out,"\n");
+      used[p1] = 0;
+      break;
+    }
+    break;
+    /// Shift left logical.
+    case KOOPA_RBO_SHL:
+    break;
+    /// Shift right logical.
+    case KOOPA_RBO_SHR:
+    break;
+    /// Shift right arithmetic.
+    case KOOPA_RBO_SAR:
+    break;
+  }
 }
