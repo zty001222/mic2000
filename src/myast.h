@@ -150,14 +150,17 @@ class LOrExpAST : public BaseAST{
         strcat(exp2, to_string(ttype).c_str());
       }
       char myexp1[10];
+      memset(myexp1,0,sizeof(myexp1));
       myexp1[0] = '%';
       strcat(myexp1, to_string(exp_depth).c_str());
       exp_depth += 1;
       char myexp2[10];
+      memset(myexp2,0,sizeof(myexp2));
       myexp2[0] = '%';
       strcat(myexp2, to_string(exp_depth).c_str());
       exp_depth += 1;
       char myexp3[10];
+      memset(myexp3,0,sizeof(myexp3));
       myexp3[0] = '%';
       strcat(myexp3, to_string(exp_depth).c_str());
       exp_depth += 1;
@@ -224,14 +227,17 @@ class LAndExpAST : public BaseAST{
         strcat(exp2, to_string(ttype).c_str());
       }
       char myexp1[10];
+      memset(myexp1,0,sizeof(myexp1));
       myexp1[0] = '%';
       strcat(myexp1, to_string(exp_depth).c_str());
       exp_depth += 1;
       char myexp2[10];
+      memset(myexp2,0,sizeof(myexp2));
       myexp2[0] = '%';
       strcat(myexp2, to_string(exp_depth).c_str());
       exp_depth += 1;
       char myexp3[10];
+      memset(myexp3,0,sizeof(myexp3));
       myexp3[0] = '%';
       strcat(myexp3, to_string(exp_depth).c_str());
       exp_depth += 1;
@@ -298,6 +304,7 @@ class EqExpAST : public BaseAST{
         strcat(exp2, to_string(ttype).c_str());
       }
       char myexp[10];
+      memset(myexp,0,sizeof(myexp));
       myexp[0] = '%';
       strcat(myexp, to_string(exp_depth).c_str());
       exp_depth += 1;
@@ -363,6 +370,7 @@ class RelExpAST : public BaseAST{
         strcat(exp2, to_string(ttype).c_str());
       }
       char myexp[10];
+      memset(myexp,0,sizeof(myexp));
       myexp[0] = '%';
       strcat(myexp, to_string(exp_depth).c_str());
       exp_depth += 1;
@@ -447,6 +455,7 @@ class AddExpAST : public BaseAST{
         strcat(exp2, to_string(ttype).c_str());
       }
       char myexp[10];
+      memset(myexp,0,sizeof(myexp));
       myexp[0] = '%';
       strcat(myexp, to_string(exp_depth).c_str());
       exp_depth += 1;
@@ -513,6 +522,7 @@ class MulExpAST : public BaseAST{
         strcat(exp2, to_string(ttype).c_str());
       }
       char myexp[10];
+      memset(myexp,0,sizeof(myexp));
       myexp[0] = '%';
       strcat(myexp, to_string(exp_depth).c_str());
       exp_depth += 1;
@@ -575,6 +585,7 @@ class UnaryExpAST : public BaseAST{
           strcat(exp1, to_string(ttype).c_str());
         }
         char myexp[10];
+        memset(myexp,0,sizeof(myexp));
         myexp[0] = '%';
         strcat(myexp, to_string(exp_depth).c_str());
         exp_depth += 1;
