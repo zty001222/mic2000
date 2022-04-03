@@ -81,25 +81,29 @@ class StmtAST : public BaseAST{
       std::cout << "StmtAST { ";
       exp->Dump(fout,koopa_str);
       strcat(koopa_str, "  ret ");
-      char exp1[10];
-      memset(exp1,0,sizeof(exp1));
-      int ttype = cur_num.top();
-      cur_num.pop();
-      if(ttype == -1){
-        std::cout << "no expr";  
-
-        strcpy(exp1, to_string(imm_stack.top()).c_str());
-        imm_stack.pop();
-      }
+      if(cur_num.empty())
+        strcat(koopa_str, "0\n");
       else{
-        std::cout << "expr";  
-        exp1[0] = '%';
-        strcat(exp1, to_string(ttype).c_str());
-      }
-      strcat(koopa_str, exp1);
-      strcat(koopa_str, "\n");
-      std::cout << " }";  
-    }  
+        char exp1[10];
+        memset(exp1,0,sizeof(exp1));
+        int ttype = cur_num.top();
+        cur_num.pop();
+        if(ttype == -1){
+          std::cout << "no expr";  
+
+          strcpy(exp1, to_string(imm_stack.top()).c_str());
+          imm_stack.pop();
+        }
+        else{
+          std::cout << "expr";  
+          exp1[0] = '%';
+          strcat(exp1, to_string(ttype).c_str());
+        }
+        strcat(koopa_str, exp1);
+        strcat(koopa_str, "\n");
+        std::cout << " }";  
+      }  
+    }
 };
 
 class ExpAST : public BaseAST{
