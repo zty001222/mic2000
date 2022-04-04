@@ -1,3 +1,12 @@
-int main() {
-  return +-+!(!-10000);
+/*
+
+qwewfaw
+wfd
+wef
+rq
+fweq"feqrgte
+w
+*/
+int main(){return /*"aa*/ 00;//12/*"*/
+  /*/*/
 }

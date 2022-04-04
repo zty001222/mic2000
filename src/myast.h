@@ -620,11 +620,11 @@ class PrimaryExpAST : public BaseAST{
     std::unique_ptr<BaseAST> exp;
     std::unique_ptr<BaseAST> number;
   void Dump(FILE * fout, char * koopa_str) const override {
+    std::cout << "in primaryexp"<<endl;  
     if(type == 2)
       number -> Dump(fout, koopa_str);
     else
       exp -> Dump(fout, koopa_str);
-    std::cout << "in primaryexp"<<endl;  
   } 
     
 };
