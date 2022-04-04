@@ -8,11 +8,17 @@
 #include <string>
 #include <string.h>
 #include <stack>
+#include <list>
+#include <map>
+#include <iterator>
+#include <algorithm>
 using namespace std;
 
 
 static stack<int> cur_num;
 static stack<int> imm_stack;
+static map<std::string, std::string> const_symtbl;
+static map<std::string, std::string> var_symtbl;
 static int exp_depth;
 class BaseAST {
  public:
@@ -55,54 +61,80 @@ class FuncTypeAST : public FuncDefAST{
     public:
         std::string functype;
     void Dump(FILE * fout, char * koopa_str) const override {
-      std::cout << "FuncTypeAST { ";
-      std::cout << functype ;
+      std::cout << "in functype"<<endl; 
       strcat(koopa_str, " ");
       strcat(koopa_str, "i");
       strcat(koopa_str, "32");
       strcat(koopa_str, " {\n");
-      std::cout << " }";
   } 
 };
 class BlockAST :  public BaseAST{
     public:
-        std::unique_ptr<BaseAST> stmt;
+        std::unique_ptr<BaseAST> blockitem;
     void Dump(FILE * fout, char * koopa_str) const override {
-      std::cout << "BlockAST { ";
+      std::cout << "in block"<<endl; 
       strcat(koopa_str, "%entry:\n");
-      stmt->Dump(fout,koopa_str);
-      std::cout << " }";
+      blockitem->Dump(fout,koopa_str);
     }
 };
 class StmtAST : public BaseAST{
     public:
         std::unique_ptr<BaseAST> exp;
+        std::string lval;
+        int type;
     void Dump(FILE * fout, char * koopa_str) const override {
-      std::cout << "StmtAST { ";
-      exp->Dump(fout,koopa_str);
-      strcat(koopa_str, "  ret ");
-      if(cur_num.empty())
-        strcat(koopa_str, "0\n");
-      else{
-        char exp1[10];
-        memset(exp1,0,sizeof(exp1));
+      std::cout << "in stmt"<<endl; 
+      if(type == 1){
+        std::cout << "StmtAST { ";
+        exp->Dump(fout,koopa_str);
+        strcat(koopa_str, "  ret ");
+        if(cur_num.empty())
+          strcat(koopa_str, "0\n");
+        else{
+          char exp1[10];
+          memset(exp1,0,sizeof(exp1));
+          int ttype = cur_num.top();
+          cur_num.pop();
+          if(ttype == -1){
+            std::cout << "no expr";  
+
+            strcpy(exp1, to_string(imm_stack.top()).c_str());
+            imm_stack.pop();
+          }
+          else{
+            std::cout << "expr";  
+            exp1[0] = '%';
+            strcat(exp1, to_string(ttype).c_str());
+          }
+          strcat(koopa_str, exp1);
+          strcat(koopa_str, "\n");
+          std::cout << " }";  
+        }
+      }  
+      //fuzhiyuju
+      else if(type == 2){ 
+        exp->Dump(fout,koopa_str);
         int ttype = cur_num.top();
         cur_num.pop();
+        string exp1;
         if(ttype == -1){
-          std::cout << "no expr";  
+          std::cout << "give no expr";  
 
-          strcpy(exp1, to_string(imm_stack.top()).c_str());
+          exp1 += to_string(imm_stack.top());
           imm_stack.pop();
         }
         else{
-          std::cout << "expr";  
-          exp1[0] = '%';
-          strcat(exp1, to_string(ttype).c_str());
+          std::cout << "give expr";  
+          exp1 += "%";
+          exp1 += to_string(ttype);
         }
-        strcat(koopa_str, exp1);
-        strcat(koopa_str, "\n");
-        std::cout << " }";  
-      }  
+        var_symtbl[lval] = exp1;
+        strcat(koopa_str,"  store ");
+        strcat(koopa_str,exp1.c_str());
+        strcat(koopa_str," ,@");
+        strcat(koopa_str,lval.c_str());
+        strcat(koopa_str,"\n");
+      }
     }
 };
 
@@ -110,7 +142,7 @@ class ExpAST : public BaseAST{
   public:
     std::unique_ptr<BaseAST> lorexp;
   void Dump(FILE * fout, char * koopa_str) const override {
-    std::cout<<"debug in exp"<<endl;
+    std::cout<<"in exp"<<endl;
     lorexp -> Dump(fout,koopa_str);
   } 
 
@@ -122,6 +154,7 @@ class LOrExpAST : public BaseAST{
     std::unique_ptr<BaseAST> landexp;
     std::unique_ptr<BaseAST> lorexp;
   void Dump(FILE * fout, char * koopa_str) const override {
+    std::cout << "in lorexp"<<endl; 
     if(type == 1){
       landexp -> Dump(fout, koopa_str);
     }
@@ -199,6 +232,7 @@ class LAndExpAST : public BaseAST{
     std::unique_ptr<BaseAST> eqexp;
     std::unique_ptr<BaseAST> landexp;
   void Dump(FILE * fout, char * koopa_str) const override {
+    std::cout << "in landexp"<<endl; 
     if(type == 1){
       eqexp -> Dump(fout, koopa_str);
     }
@@ -276,6 +310,7 @@ class EqExpAST : public BaseAST{
     std::unique_ptr<BaseAST> eqexp;
     std::unique_ptr<BaseAST> relexp;
   void Dump(FILE * fout, char * koopa_str) const override {
+    std::cout << "in eqexp"<<endl; 
     if(type == 1){
       relexp -> Dump(fout, koopa_str);
     }
@@ -342,6 +377,7 @@ class RelExpAST : public BaseAST{
     std::unique_ptr<BaseAST> addexp;
     std::unique_ptr<BaseAST> relexp;
   void Dump(FILE * fout, char * koopa_str) const override {
+    std::cout << "in rel exp"<<endl; 
     if(type == 1){
       addexp -> Dump(fout, koopa_str);
     }
@@ -438,6 +474,8 @@ class AddExpAST : public BaseAST{
       char exp2[10];
       memset(exp1,0,sizeof(exp1));
       memset(exp2,0,sizeof(exp2));
+      //std::cout << "finish parsing both id"<<endl;  
+      //std::cout << cur_num.size()<<endl; 
       ttype = cur_num.top();
       cur_num.pop();
       if(ttype == -1){
@@ -482,6 +520,7 @@ class AddExpAST : public BaseAST{
         strcat(koopa_str, "\n");
       }
       cur_num.push(exp_depth-1);
+      std::cout<<"finish add without problem"<<endl;
     }
   }
     
@@ -617,11 +656,49 @@ class UnaryExpAST : public BaseAST{
 class PrimaryExpAST : public BaseAST{
   public:
     int type;
+    std::string lval;
     std::unique_ptr<BaseAST> exp;
     std::unique_ptr<BaseAST> number;
   void Dump(FILE * fout, char * koopa_str) const override {
-    std::cout << "in primaryexp"<<endl;  
-    if(type == 2)
+    std::cout << "in primaryexp"<<endl;
+    if(type == 3)  {
+      std::cout << "in primaryexp and going to parse lval"<<endl;
+      map<string, string>::iterator it1;
+      map<string, string>::iterator it2;
+      it1 = const_symtbl.find(lval) ;
+      it2 = var_symtbl.find(lval) ;
+      //variable need to be load
+      if(it1 == const_symtbl.end()){
+        std::cout<<"no target in const symbol"<<endl;
+        char myexp[10];
+        memset(myexp,0,sizeof(myexp));
+        myexp[0] = '%';
+        strcat(myexp, to_string(exp_depth).c_str());
+        cur_num.push(exp_depth);
+        strcat(koopa_str, "  %");
+        strcat(koopa_str, to_string(exp_depth).c_str());
+        strcat(koopa_str, " = load @");
+        strcat(koopa_str, lval.c_str());
+        strcat(koopa_str, "\n");
+        exp_depth++;
+
+      }
+      else{
+        std::string target = it1->second;
+        if(target[0] == '%'){
+          std::cout<<"after this, target become:"<<target<<endl;
+          target.erase(target.begin());
+          int tmp = stoi(target);
+          cur_num.push(tmp);
+        }
+        else{
+          std::cout<<"target become:"<<target<<endl;
+          cur_num.push(-1);
+          imm_stack.push(stoi(target));
+        }
+      }
+    }
+    else if(type == 2)
       number -> Dump(fout, koopa_str);
     else
       exp -> Dump(fout, koopa_str);
@@ -640,7 +717,203 @@ class NumberAST : public BaseAST{
     }  
 };
 
+//newly defined
 
+class BlockItemAST : public BaseAST{
+    public: 
+      std::unique_ptr<BaseAST> stmt;
+      std::unique_ptr<BaseAST> decl;
+      std::unique_ptr<BaseAST> blockitem;
+      int type;
+    void Dump(FILE * fout, char * koopa_str) const override {
+      std::cout << "in blockitem"<<endl;  
+      if(type == 1){
+        std::cout << "    type1"<<endl;  
+        blockitem -> Dump(fout, koopa_str);
+        stmt -> Dump(fout, koopa_str);
+      }
+      else if(type == 2){
+        std::cout << "    type2"<<endl; 
+        blockitem -> Dump(fout, koopa_str);
+        decl -> Dump(fout, koopa_str);
+      }
+      else if(type == 3){
+        std::cout << "    type3"<<endl; 
+        decl -> Dump(fout, koopa_str);
+      }
+      else if(type == 4){
+        std::cout << "    type4"<<endl; 
+        stmt -> Dump(fout, koopa_str);
+      }
+    }  
+};
+
+class DeclAST : public BaseAST{
+    public: 
+      std::unique_ptr<BaseAST> constdecl;
+      std::unique_ptr<BaseAST> vardecl;
+      int type;
+    void Dump(FILE * fout, char * koopa_str) const override {
+      std::cout << "in decl"<<endl; 
+      if(type == 1){
+        constdecl -> Dump(fout, koopa_str);
+      }
+      else{
+        vardecl -> Dump(fout, koopa_str);
+      }
+    }  
+};
+
+class ConstDeclAST : public BaseAST{
+    public: 
+      std::unique_ptr<BaseAST> constdef;
+    void Dump(FILE * fout, char * koopa_str) const override {
+      std::cout << "in const decl"<<endl; 
+      constdef -> Dump(fout, koopa_str);
+    }  
+};
+
+
+class ConstDefAST : public BaseAST{
+    public: 
+      std::string lval;
+      std::unique_ptr<BaseAST> constdef;
+      std::unique_ptr<BaseAST> constinitval;
+      int type ;
+    void Dump(FILE * fout, char * koopa_str) const override {
+      std::cout << "in const def"<<endl; 
+      if(type == 2){
+        constdef -> Dump(fout, koopa_str);
+      }
+      constinitval -> Dump(fout, koopa_str);
+      int ttype = cur_num.top();
+      cur_num.pop();
+      if(ttype == -1){
+        int tmp = imm_stack.top();
+        imm_stack.pop();
+        const_symtbl[lval] = to_string(tmp);
+      }
+      else{
+        const_symtbl[lval] = "%" + to_string(ttype);
+      }
+
+    }  
+};
+
+class ConstInitValAST : public BaseAST{
+    public: 
+      std::unique_ptr<BaseAST> constexp;
+    void Dump(FILE * fout, char * koopa_str) const override {
+      std::cout << "in const init val"<<endl; 
+      constexp -> Dump(fout, koopa_str);
+    }  
+};
+
+class ConstExpAST : public BaseAST{
+    public: 
+      std::unique_ptr<BaseAST> exp;
+    void Dump(FILE * fout, char * koopa_str) const override {
+      std::cout << "in const exp"<<endl; 
+      exp -> Dump(fout, koopa_str);
+    }  
+};
+
+class VarDeclAST : public BaseAST{
+    public: 
+      std::unique_ptr<BaseAST> vardef;
+    void Dump(FILE * fout, char * koopa_str) const override {
+      std::cout << "in var decl"<<endl; 
+      vardef -> Dump(fout, koopa_str);
+    }  
+};
+
+class VarDefAST : public BaseAST{
+    public: 
+      std::unique_ptr<BaseAST> vardef;
+      std::string lval;
+      std::unique_ptr<BaseAST> initval;
+      int type;
+    void Dump(FILE * fout, char * koopa_str) const override {
+      std::cout << "in var def"<<endl; 
+      if(type == 1){
+        vardef -> Dump(fout, koopa_str);
+        strcat(koopa_str, "  @");
+        strcat(koopa_str, lval.c_str());
+        strcat(koopa_str, " = alloc i32\n");
+        var_symtbl[lval] = "";
+      }
+      if(type == 2){
+        vardef -> Dump(fout, koopa_str);
+        initval -> Dump(fout, koopa_str);  
+        strcat(koopa_str, "  @");
+        strcat(koopa_str, lval.c_str());
+        strcat(koopa_str, " = alloc i32\n");
+        int ttype = cur_num.top();
+        cur_num.pop();
+        std::cout<<"fine in type2"<<endl;
+        if(ttype == -1){
+          int tmp = imm_stack.top();
+          imm_stack.pop();
+          var_symtbl[lval] = to_string(tmp);
+          strcat(koopa_str, "  store ");
+          strcat(koopa_str, var_symtbl[lval].c_str());
+          strcat(koopa_str, " ,@");
+          strcat(koopa_str, lval.c_str());
+          strcat(koopa_str, "\n");
+        }
+        else{
+          var_symtbl[lval] = "%" + to_string(ttype);
+          strcat(koopa_str, "  store ");
+          strcat(koopa_str, var_symtbl[lval].c_str());
+          strcat(koopa_str, " ,@");
+          strcat(koopa_str, lval.c_str());
+          strcat(koopa_str, "\n");
+        }
+      }
+      if(type == 3){
+        strcat(koopa_str, "  @");
+        strcat(koopa_str, lval.c_str());
+        strcat(koopa_str, " = alloc i32\n");
+        var_symtbl[lval] = "";
+      }
+      if(type == 4){
+        initval -> Dump(fout, koopa_str);
+        strcat(koopa_str, "  @");
+        strcat(koopa_str, lval.c_str());
+        strcat(koopa_str, " = alloc i32\n");
+        int ttype = cur_num.top();
+        cur_num.pop();
+        std::cout<<"fine in type2"<<endl;
+        if(ttype == -1){
+          int tmp = imm_stack.top();
+          imm_stack.pop();
+          var_symtbl[lval] = to_string(tmp);
+          strcat(koopa_str, "  store ");
+          strcat(koopa_str, var_symtbl[lval].c_str());
+          strcat(koopa_str, " ,@");
+          strcat(koopa_str, lval.c_str());
+          strcat(koopa_str, "\n");
+        }
+        else{
+          var_symtbl[lval] = "%" + to_string(ttype);
+          strcat(koopa_str, "  store ");
+          strcat(koopa_str, var_symtbl[lval].c_str());
+          strcat(koopa_str, " ,@");
+          strcat(koopa_str, lval.c_str());
+          strcat(koopa_str, "\n");
+        }
+      }
+    }  
+};
+
+class InitValAST : public BaseAST{
+    public: 
+      std::unique_ptr<BaseAST> exp;
+    void Dump(FILE * fout, char * koopa_str) const override {
+      std::cout << "in init val"<<endl; 
+      exp -> Dump(fout, koopa_str);
+    }  
+};
 
 
 #endif
