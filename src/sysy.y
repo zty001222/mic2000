@@ -37,12 +37,12 @@ using namespace std;
 
 // lexer 返回的所有 token 种类的声明
 // 注意 IDENT 和 INT_CONST 会返回 token 的值, 分别对应 str_val 和 int_val
-%token INT RETURN
+%token INT RETURN CONST
 %token <str_val> IDENT
 %token <int_val> INT_CONST
 
 // 非终结符的类型定义
-%type <ast_val> FuncDef FuncType Block Stmt Number Exp LOrExp LAndExp EqExp RelExp AddExp MulExp UnaryExp PrimaryExp
+%type <ast_val> FuncDef FuncType Block Stmt Number Exp LOrExp LAndExp EqExp RelExp AddExp MulExp UnaryExp PrimaryExp BlockItem Decl ConstDecl ConstDef ConstInitVal VarDecl VarDef InitVal ConstExp
 
 %%
 
@@ -89,17 +89,190 @@ FuncType
   ;
 
 Block
-  : '{' Stmt '}' {
+  : '{' BlockItem '}' {
     auto block = new BlockAST();
-    block->stmt = unique_ptr<BaseAST>($2);
+    block->blockitem = unique_ptr<BaseAST>($2);
     $$ = block;
   }
   ;
+
+BlockItem
+  : Decl {
+    auto blockitem = new BlockItemAST();
+    blockitem -> type = 3;
+    blockitem -> decl = unique_ptr<BaseAST>($1);
+    $$ = blockitem;
+  }
+  ;
+
+BlockItem
+  : Stmt {
+    auto blockitem = new BlockItemAST();
+    blockitem -> type = 4;
+    blockitem -> stmt = unique_ptr<BaseAST>($1);
+    $$ = blockitem;
+
+  }
+  ;
+
+BlockItem
+  : BlockItem Stmt {
+    auto blockitem = new BlockItemAST();
+    blockitem -> type = 1;
+    blockitem -> stmt = unique_ptr<BaseAST>($2);
+    blockitem -> blockitem = unique_ptr<BaseAST>($1);
+    $$ = blockitem;
+  }
+  ;
+
+BlockItem
+  : BlockItem Decl {
+    auto blockitem = new BlockItemAST();
+    blockitem -> type = 2;
+    blockitem -> decl = unique_ptr<BaseAST>($2);
+    blockitem -> blockitem = unique_ptr<BaseAST>($1);
+    $$ = blockitem;
+  }
+  ;
+
+Stmt
+  : IDENT '=' Exp ';' {
+    auto stmt = new StmtAST();
+    stmt -> exp = unique_ptr<BaseAST>($3);
+    stmt -> lval = *unique_ptr<string>($1);
+    stmt -> type = 2;
+    $$ = stmt;
+  }
+  ;
+
+
+Decl
+  : ConstDecl{
+    auto decl = new DeclAST();
+    decl -> constdecl = unique_ptr<BaseAST>($1);
+    decl -> type = 1;
+    $$=decl;
+  }
+  ;
+
+Decl
+  : VarDecl{
+    auto decl = new DeclAST();
+    decl -> vardecl = unique_ptr<BaseAST>($1);
+    decl -> type = 2;
+    $$=decl;
+  }
+  ;
+
+ConstDecl
+  : CONST INT ConstDef ';'{
+    auto constdecl = new ConstDeclAST();
+    constdecl -> constdef = unique_ptr<BaseAST>($3);
+    $$ = constdecl;
+  }
+  ;
+
+ConstDef
+  : IDENT '=' ConstInitVal {
+    auto constdef = new ConstDefAST();
+    constdef -> lval = *unique_ptr<string>($1);
+    constdef -> constinitval = unique_ptr<BaseAST>($3);
+    constdef -> type = 1;
+    $$ = constdef;
+  }
+  ;
+
+ConstDef
+  : ConstDef ',' IDENT '=' ConstInitVal {
+    auto constdef = new ConstDefAST();
+    constdef -> lval = *unique_ptr<string>($3);
+    constdef -> constinitval = unique_ptr<BaseAST>($5);
+    constdef -> constdef = unique_ptr<BaseAST>($1);
+    constdef -> type = 2;
+    $$ = constdef;
+
+  }
+  ;
+
+ConstInitVal
+  : ConstExp{
+    auto constinitval = new ConstInitValAST();
+    constinitval -> constexp =  unique_ptr<BaseAST>($1);
+    $$ = constinitval;
+  } 
+  ;
+
+ConstExp
+  : Exp{
+    auto constexp = new ConstExpAST();
+    constexp -> exp = unique_ptr<BaseAST>($1);
+    $$ = constexp;
+  }
+  ;
+
+VarDecl
+  : INT VarDef ';'{
+    auto vardecl = new VarDeclAST();
+    vardecl -> vardef = unique_ptr<BaseAST>($2);
+    $$ = vardecl;
+  }
+  ;
+
+VarDef
+  : VarDef ',' IDENT{
+    auto vardef = new VarDefAST();
+    vardef -> vardef = unique_ptr<BaseAST>($1);
+    vardef -> type = 1;
+    vardef -> lval = *unique_ptr<string>($3);
+    $$ = vardef;
+  }
+  ;
+
+VarDef
+  : VarDef ',' IDENT '=' InitVal{
+    auto vardef = new VarDefAST();
+    vardef -> vardef = unique_ptr<BaseAST>($1);
+    vardef -> type = 2;
+    vardef -> lval = *unique_ptr<string>($3);
+    vardef -> initval = unique_ptr<BaseAST>($5);
+    $$ = vardef;
+  }
+  ;
+
+VarDef
+  : IDENT{
+    auto vardef = new VarDefAST();
+    vardef -> type = 3;
+    vardef -> lval = *unique_ptr<string>($1);
+    $$ = vardef;
+
+  }
+  ;
+
+VarDef
+  : IDENT '=' InitVal{
+    auto vardef = new VarDefAST();
+    vardef -> type = 4;
+    vardef -> lval = *unique_ptr<string>($1);
+    vardef -> initval = unique_ptr<BaseAST>($3);
+    $$ = vardef;
+  }
+  ;
+
+InitVal
+  : Exp{
+    auto initval = new InitValAST();
+    initval -> exp = unique_ptr<BaseAST>($1);
+    $$ = initval;
+  }
+  ;
+
 
 Stmt
   : RETURN Exp ';' {
     auto stmt = new StmtAST();
     stmt -> exp = unique_ptr<BaseAST>($2);
+    stmt -> type = 1;
     $$ = stmt;
   }
   ;
@@ -346,6 +519,15 @@ PrimaryExp
     auto primaryexp = new PrimaryExpAST();
     primaryexp -> number = unique_ptr<BaseAST>($1);
     primaryexp -> type = 2;
+    $$ = primaryexp;
+  }
+  ;
+
+PrimaryExp
+  : IDENT{
+    auto primaryexp = new PrimaryExpAST();
+    primaryexp -> lval = *unique_ptr<string>($1);
+    primaryexp -> type = 3;
     $$ = primaryexp;
   }
   ;
