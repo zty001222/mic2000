@@ -729,15 +729,18 @@ class BlockItemAST : public BaseAST{
       std::unique_ptr<BaseAST> blockitem;
       int type;
     void Dump(FILE * fout, char * koopa_str) const override {
+      if(terminated){return;}
       std::cout << "in blockitem"<<endl;  
       if(type == 1){
         std::cout << "    type1"<<endl;  
         blockitem -> Dump(fout, koopa_str);
+        if(terminated){return;}
         stmt -> Dump(fout, koopa_str);
       }
       else if(type == 2){
         std::cout << "    type2"<<endl; 
         blockitem -> Dump(fout, koopa_str);
+        if(terminated){return;}
         decl -> Dump(fout, koopa_str);
       }
       else if(type == 3){
