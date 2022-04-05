@@ -20,6 +20,7 @@ static stack<int> imm_stack;
 static map<std::string, std::string> const_symtbl;
 static map<std::string, std::string> var_symtbl;
 static int exp_depth;
+static int terminated = 0;
 class BaseAST {
  public:
   
@@ -84,7 +85,9 @@ class StmtAST : public BaseAST{
         int type;
     void Dump(FILE * fout, char * koopa_str) const override {
       std::cout << "in stmt"<<endl; 
-      if(type == 1){
+      if(terminated){return;}
+      if(type == 1 && !terminated){
+        terminated = 1;
         std::cout << "StmtAST { ";
         exp->Dump(fout,koopa_str);
         strcat(koopa_str, "  ret ");
