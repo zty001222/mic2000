@@ -90,9 +90,7 @@ void Visit(const koopa_raw_program_t &program) {
 // 访问 raw slice
 void Visit(const koopa_raw_slice_t &slice) {
   show_usable_regs();
-  cout<<"in slice"<<endl;
   for (size_t i = 0; i < slice.len; ++i) {
-    std::cout<<"in slice "<<i<<endl;
     auto ptr = slice.buffer[i];
     // 根据 slice 的 kind 决定将 ptr 视作何种元素
     switch (slice.kind) {
@@ -123,6 +121,7 @@ void Visit(const koopa_raw_function_t &func) {
   cout<<"in func"<<endl;
   // 执行一些其他的必要操作
   strcat(asm_out, "  .globl main\nmain:\n");
+  strcat(asm_out, "  addi sp, sp, -1024\n");
   // 访问所有基本块
   Visit(func->bbs);
 }
@@ -131,7 +130,6 @@ void Visit(const koopa_raw_function_t &func) {
 void Visit(const koopa_raw_basic_block_t &bb) {
   cout<<"in block"<<endl;
   // 执行一些其他的必要操作
-  strcat(asm_out, "addi sp, sp, 128\n");
   std::cout<<"in visit block, instlen:"<<bb->insts.len<<" paramslen:"<<bb->params.len<<endl;
   // 访问所有指令
   Visit(bb->insts);
@@ -140,7 +138,12 @@ void Visit(const koopa_raw_basic_block_t &bb) {
 
 // 访问指令
 void Visit(const koopa_raw_value_t &value) {
+  const char * name = value->name;
+  std::string tmpstring;
+  if(name == NULL){cout<<"no name"<<endl;}
+  else {std::cout<<"value name : "<<name<<endl;tmpstring = name;}
   if(saved_bin_stack.find(value) != saved_bin_stack.end()){
+    cout<<"in value in stored"<<endl;
     int reg = 0;
       for(int i = 0 ; i < 7 ; i++){
           if(used[i] == 0){
@@ -156,13 +159,27 @@ void Visit(const koopa_raw_value_t &value) {
       strcat(asm_out, "(sp)\n");
       calstack.push(reg);
   }
+  else if(name != NULL && (alloc_pos.find(tmpstring) != alloc_pos.end())){
+    cout<<"in value in stored varible"<<endl;
+    int reg = 0;
+      for(int i = 0 ; i < 7 ; i++){
+          if(used[i] == 0){
+              used[i] = 1;
+              reg = i;
+              break;
+          }
+      }
+      strcat(asm_out, "  lw t");
+      strcat(asm_out, to_string(reg).c_str());
+      strcat(asm_out, ", ");
+      strcat(asm_out, to_string(alloc_pos[name]).c_str());
+      strcat(asm_out, "(sp)\n");
+      calstack.push(reg);
+  }
   else{
     show_usable_regs();
-    cout<<"in value"<<endl;
+    cout<<"in value nostore"<<endl;
     // 根据指令类型判断后续需要如何访问
-    const char * name = value->name;
-    if(name == NULL){cout<<"no name"<<endl;}
-    else std::cout<<"value name : "<<name<<endl;
     const auto &kind = value->kind;
     switch (kind.tag) {
       case KOOPA_RVT_RETURN:
@@ -222,6 +239,7 @@ void Visit(const koopa_raw_value_t &value) {
               // 访问 integer 指令
               sp_max += 4;
           }
+          break;
       case KOOPA_RVT_GLOBAL_ALLOC: 
         std::cout<<"in visit g-alloc"<<endl;
         break;
@@ -276,7 +294,7 @@ void Visit(const koopa_raw_return_t &ret){
   strcat(asm_out,to_string(p1).c_str());
   strcat(asm_out,"\n");
   used[p1] = 0;
-  strcat(asm_out, "addi sp, sp, -128\n");
+  strcat(asm_out, "  addi sp, sp, 1024\n");
   strcat(asm_out,"  ret\n");
 }
 
