@@ -10,7 +10,7 @@
 #include <algorithm>
 #include "koopa.h"
 
-char asm_out[1000];
+char asm_out[10000];
 
 stack<int> calstack;
 map<koopa_raw_value_t,int> saved_bin;
