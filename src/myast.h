@@ -290,8 +290,8 @@ public:
       cur_num.pop();
       if (ttype == -1)
       {
-        int tmp = imm_stack.top();
         exp1 = to_string(imm_stack.top());
+        int tmp = imm_stack.top();
         imm_stack.pop();
         if(tmp != 0){
           imm_stack.push(1);
@@ -308,7 +308,13 @@ public:
       if (ttype == -1)
       {
         exp2 = to_string(imm_stack.top());
+        int tmp = imm_stack.top();
         imm_stack.pop();
+        if(tmp != 0){
+          imm_stack.push(1);
+          cur_num.push(-1);
+          return;
+        }
       }
       else
       {
@@ -374,7 +380,13 @@ public:
       if (ttype == -1)
       {
         exp2 = to_string(imm_stack.top());
+        int tmp = imm_stack.top();
         imm_stack.pop();
+        if(tmp == 0){
+          imm_stack.push(0);
+          cur_num.push(-1);
+          return;
+        }
       }
       else
       {
