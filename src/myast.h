@@ -24,6 +24,7 @@ static vector<map<std::string, std::string> > const_symtbl_b;
 static int exp_depth;
 static int block_depth;
 static int terminated = 0;
+static std::string koopa_string;
 class BaseAST
 {
 public:
@@ -54,13 +55,16 @@ public:
   void Dump(FILE *fout, char *koopa_str) const override
   {
     std::cout << "FuncDefAST { ";
-    strcat(koopa_str, "fun @");
-    strcat(koopa_str, ident.c_str());
-    strcat(koopa_str, "():");
+    koopa_string += "fun @" + ident + "():";
+    //strcat(koopa_str, "fun @");
+    //strcat(koopa_str, ident.c_str());
+    //strcat(koopa_str, "():");
     func_type->Dump(fout, koopa_str);
     std::cout << ", " << ident << ", ";
     block->Dump(fout, koopa_str);
-    strcat(koopa_str, "}\n");
+    koopa_string += "}\n";
+    //strcat(koopa_str, "}\n");
+    strcpy(koopa_str, koopa_string.c_str());
     std::cout << " }";
   }
 };
@@ -74,11 +78,12 @@ public:
     var_symtbl_b.push_back(*(new map<std::string, std::string>()));
     const_symtbl_b.push_back(*(new map<std::string, std::string>()));
     std::cout << "in functype" << endl;
-    strcat(koopa_str, " ");
-    strcat(koopa_str, "i");
-    strcat(koopa_str, "32");
-    strcat(koopa_str, " {\n");
-    strcat(koopa_str, "%entry:\n");
+    koopa_string += " i32 {\n%entry:\n";
+    //strcat(koopa_str, " ");
+    //strcat(koopa_str, "i");
+    //strcat(koopa_str, "32");
+    //strcat(koopa_str, " {\n");
+    //strcat(koopa_str, "%entry:\n");
   }
 };
 class BlockAST : public BaseAST
@@ -113,31 +118,27 @@ public:
       terminated = 1;
       std::cout << "StmtAST { ";
       exp->Dump(fout, koopa_str);
-      strcat(koopa_str, "  ret ");
+      koopa_string += "  ret ";
+      //strcat(koopa_str, "  ret ");
       if (cur_num.empty() || type == 3)
-        strcat(koopa_str, "0\n");
+        koopa_string += "0\n";
+        //strcat(koopa_str, "0\n");
       else
       {
-        char exp1[20];
-        memset(exp1, 0, sizeof(exp1));
         int ttype = cur_num.top();
         cur_num.pop();
         if (ttype == -1)
         {
           std::cout << "no expr";
-
-          strcpy(exp1, to_string(imm_stack.top()).c_str());
+          koopa_string +=  to_string(imm_stack.top()) + "\n";
           imm_stack.pop();
         }
         else
         {
           std::cout << "expr";
-          exp1[0] = '%';
-          strcat(exp1, to_string(ttype).c_str());
+          koopa_string +=  "%" + to_string(ttype) + "\n";
         }
-        strcat(koopa_str, exp1);
-        strcat(koopa_str, "\n");
-        std::cout << " }";
+        //std::cout << " }";
       }
     }
     // fuzhiyuju
@@ -157,8 +158,7 @@ public:
       else
       {
         std::cout << "give expr";
-        exp1 += "%";
-        exp1 += to_string(ttype);
+        exp1 += "%" + to_string(ttype);
       }
       int depth;
       for (depth = block_depth; depth >= 0; depth--)
@@ -169,29 +169,29 @@ public:
         }
       }
       var_symtbl_b[depth][lval] = exp1;
-      strcat(koopa_str, "  store ");
-      strcat(koopa_str, exp1.c_str());
-      strcat(koopa_str, " ,@");
-      strcat(koopa_str, lval.c_str());
-      strcat(koopa_str, "_");
-      strcat(koopa_str, to_string(depth).c_str());
-      strcat(koopa_str, "\n");
+      koopa_string += "  store " + exp1 + " ,@" + lval + "_" + to_string(depth) + "\n";
+      //strcat(koopa_str, "  store ");
+      //strcat(koopa_str, exp1.c_str());
+      //strcat(koopa_str, " ,@");
+      //strcat(koopa_str, lval.c_str());
+      //strcat(koopa_str, "_");
+      //strcat(koopa_str, to_string(depth).c_str());
+      //strcat(koopa_str, "\n");
     }
     else if (type == 4)
     {
       exp->Dump(fout, koopa_str);
       int ttype = cur_num.top();
       cur_num.pop();
-      string exp1;
       if (ttype == -1)
       {
         std::cout << "give no expr";
-        exp1 += to_string(imm_stack.top());
         imm_stack.pop();
       }
     }
     else if (type == 5)
     {
+      // happy 
     }
     else
     {
@@ -235,49 +235,43 @@ public:
       landexp->Dump(fout, koopa_str);
       lorexp->Dump(fout, koopa_str);
       int ttype;
-      char exp1[20];
-      char exp2[20];
-      memset(exp1, 0, sizeof(exp1));
-      memset(exp2, 0, sizeof(exp2));
+      string exp1;
+      string exp2;
       ttype = cur_num.top();
       cur_num.pop();
       if (ttype == -1)
       {
-        strcpy(exp1, to_string(imm_stack.top()).c_str());
+        exp1 = to_string(imm_stack.top());
         imm_stack.pop();
       }
       else
       {
-        exp1[0] = '%';
-        strcat(exp1, to_string(ttype).c_str());
+        exp1 = "%" + to_string(ttype);
       }
       ttype = cur_num.top();
       cur_num.pop();
       if (ttype == -1)
       {
-        strcpy(exp2, to_string(imm_stack.top()).c_str());
+        exp2 = to_string(imm_stack.top());
         imm_stack.pop();
       }
       else
       {
-        exp2[0] = '%';
-        strcat(exp2, to_string(ttype).c_str());
+        exp2 = "%" +  to_string(ttype);
       }
-      char myexp1[20];
-      memset(myexp1, 0, sizeof(myexp1));
-      myexp1[0] = '%';
-      strcat(myexp1, to_string(exp_depth).c_str());
+      string myexp1;
+      myexp1 = "%" + to_string(exp_depth);
       exp_depth += 1;
-      char myexp2[20];
-      memset(myexp2, 0, sizeof(myexp2));
-      myexp2[0] = '%';
-      strcat(myexp2, to_string(exp_depth).c_str());
+      string myexp2;
+      myexp2 = "%" + to_string(exp_depth);
       exp_depth += 1;
-      char myexp3[20];
-      memset(myexp3, 0, sizeof(myexp3));
-      myexp3[0] = '%';
-      strcat(myexp3, to_string(exp_depth).c_str());
+      string myexp3;
+      myexp3 = "%" + to_string(exp_depth);
       exp_depth += 1;
+      koopa_string += "  " + myexp1 + " = ne 0, " + exp1 + "\n";
+      koopa_string += "  " + myexp2 + " = ne 0, " + exp2 + "\n";
+      koopa_string += "  " + myexp3 + " = or " + myexp1 + ", " + myexp2 + "\n";
+      /*
       strcat(koopa_str, "  ");
       strcat(koopa_str, myexp1);
       strcat(koopa_str, " = ne 0, ");
@@ -297,6 +291,7 @@ public:
       strcat(koopa_str, ", ");
       strcat(koopa_str, myexp2);
       strcat(koopa_str, "\n");
+      */
       cur_num.push(exp_depth - 1);
     }
   }
@@ -321,49 +316,44 @@ public:
       eqexp->Dump(fout, koopa_str);
       landexp->Dump(fout, koopa_str);
       int ttype;
-      char exp1[20];
-      char exp2[20];
-      memset(exp1, 0, sizeof(exp1));
-      memset(exp2, 0, sizeof(exp2));
+      string exp1;
+      string exp2;
       ttype = cur_num.top();
       cur_num.pop();
       if (ttype == -1)
       {
-        strcpy(exp1, to_string(imm_stack.top()).c_str());
+        exp1 = to_string(imm_stack.top());
         imm_stack.pop();
       }
       else
       {
-        exp1[0] = '%';
-        strcat(exp1, to_string(ttype).c_str());
+        exp1 = "%" + to_string(ttype);
       }
       ttype = cur_num.top();
       cur_num.pop();
       if (ttype == -1)
       {
-        strcpy(exp2, to_string(imm_stack.top()).c_str());
+        exp2 = to_string(imm_stack.top());
         imm_stack.pop();
       }
       else
       {
-        exp2[0] = '%';
-        strcat(exp2, to_string(ttype).c_str());
+        exp2 = "%" + to_string(ttype);
       }
-      char myexp1[20];
-      memset(myexp1, 0, sizeof(myexp1));
-      myexp1[0] = '%';
-      strcat(myexp1, to_string(exp_depth).c_str());
+      
+      string myexp1;
+      myexp1 = "%" + to_string(exp_depth);
       exp_depth += 1;
-      char myexp2[20];
-      memset(myexp2, 0, sizeof(myexp2));
-      myexp2[0] = '%';
-      strcat(myexp2, to_string(exp_depth).c_str());
+      string myexp2;
+      myexp2 = "%" + to_string(exp_depth);
       exp_depth += 1;
-      char myexp3[20];
-      memset(myexp3, 0, sizeof(myexp3));
-      myexp3[0] = '%';
-      strcat(myexp3, to_string(exp_depth).c_str());
+      string myexp3;
+      myexp3 = "%" + to_string(exp_depth);
       exp_depth += 1;
+      koopa_string += "  " + myexp1 + " = ne 0, " + exp1 + "\n";
+      koopa_string += "  " + myexp2 + " = ne 0, " + exp2 + "\n";
+      koopa_string += "  " + myexp3 + " = and " + myexp1 + ", " + myexp2 + "\n";
+      /*
       strcat(koopa_str, "  ");
       strcat(koopa_str, myexp1);
       strcat(koopa_str, " = ne 0, ");
@@ -383,6 +373,7 @@ public:
       strcat(koopa_str, ", ");
       strcat(koopa_str, myexp2);
       strcat(koopa_str, "\n");
+      */
       cur_num.push(exp_depth - 1);
     }
   }
@@ -406,41 +397,37 @@ public:
       relexp->Dump(fout, koopa_str);
       eqexp->Dump(fout, koopa_str);
       int ttype;
-      char exp1[20];
-      char exp2[20];
-      memset(exp1, 0, sizeof(exp1));
-      memset(exp2, 0, sizeof(exp2));
+      string exp1;
+      string exp2;
       ttype = cur_num.top();
       cur_num.pop();
       if (ttype == -1)
       {
-        strcpy(exp1, to_string(imm_stack.top()).c_str());
+        exp1 = to_string(imm_stack.top());
         imm_stack.pop();
       }
       else
       {
-        exp1[0] = '%';
-        strcat(exp1, to_string(ttype).c_str());
+        exp1 = "%" + to_string(ttype);
       }
       ttype = cur_num.top();
       cur_num.pop();
       if (ttype == -1)
       {
-        strcpy(exp2, to_string(imm_stack.top()).c_str());
+        exp2 = to_string(imm_stack.top());
         imm_stack.pop();
       }
       else
       {
-        exp2[0] = '%';
-        strcat(exp2, to_string(ttype).c_str());
+        exp2 = "%" + to_string(ttype);
       }
-      char myexp[20];
-      memset(myexp, 0, sizeof(myexp));
-      myexp[0] = '%';
-      strcat(myexp, to_string(exp_depth).c_str());
+      string myexp;
+      myexp = "%" + to_string(exp_depth);
       exp_depth += 1;
       if (type == 2)
       {
+        koopa_string += "  " + myexp + " = eq " + exp1 + ", " + exp2 + "\n";
+        /*
         strcat(koopa_str, "  ");
         strcat(koopa_str, myexp);
         strcat(koopa_str, " = eq ");
@@ -448,9 +435,12 @@ public:
         strcat(koopa_str, ", ");
         strcat(koopa_str, exp2);
         strcat(koopa_str, "\n");
+        */
       }
       if (type == 3)
       {
+        koopa_string += "  " + myexp + " = ne " + exp1 + ", " + exp2 + "\n";
+        /*
         strcat(koopa_str, "  ");
         strcat(koopa_str, myexp);
         strcat(koopa_str, " = ne ");
@@ -458,6 +448,7 @@ public:
         strcat(koopa_str, ", ");
         strcat(koopa_str, exp2);
         strcat(koopa_str, "\n");
+        */
       }
       cur_num.push(exp_depth - 1);
     }
@@ -482,41 +473,37 @@ public:
       addexp->Dump(fout, koopa_str);
       relexp->Dump(fout, koopa_str);
       int ttype;
-      char exp1[20];
-      char exp2[20];
-      memset(exp1, 0, sizeof(exp1));
-      memset(exp2, 0, sizeof(exp2));
+      string exp1;
+      string exp2;
       ttype = cur_num.top();
       cur_num.pop();
       if (ttype == -1)
       {
-        strcpy(exp1, to_string(imm_stack.top()).c_str());
+        exp1 = to_string(imm_stack.top());
         imm_stack.pop();
       }
       else
       {
-        exp1[0] = '%';
-        strcat(exp1, to_string(ttype).c_str());
+        exp1 = "%" + to_string(ttype);
       }
       ttype = cur_num.top();
       cur_num.pop();
       if (ttype == -1)
       {
-        strcpy(exp2, to_string(imm_stack.top()).c_str());
+        exp2 = to_string(imm_stack.top());
         imm_stack.pop();
       }
       else
       {
-        exp2[0] = '%';
-        strcat(exp2, to_string(ttype).c_str());
+        exp2 = "%" + to_string(ttype);
       }
-      char myexp[20];
-      memset(myexp, 0, sizeof(myexp));
-      myexp[0] = '%';
-      strcat(myexp, to_string(exp_depth).c_str());
+      string myexp;
+      myexp = "%" + to_string(exp_depth);
       exp_depth += 1;
       if (type == 2)
       {
+        koopa_string += "  " + myexp + " = lt " + exp1 + ", " + exp2 + "\n";
+        /*
         strcat(koopa_str, "  ");
         strcat(koopa_str, myexp);
         strcat(koopa_str, " = lt ");
@@ -524,9 +511,12 @@ public:
         strcat(koopa_str, ", ");
         strcat(koopa_str, exp2);
         strcat(koopa_str, "\n");
+        */
       }
       if (type == 3)
       {
+        koopa_string += "  " + myexp + " = gt " + exp1 + ", " + exp2 + "\n";
+        /*
         strcat(koopa_str, "  ");
         strcat(koopa_str, myexp);
         strcat(koopa_str, " = gt ");
@@ -534,9 +524,12 @@ public:
         strcat(koopa_str, ", ");
         strcat(koopa_str, exp2);
         strcat(koopa_str, "\n");
+        */
       }
       if (type == 4)
       {
+        koopa_string += "  " + myexp + " = le " + exp1 + ", " + exp2 + "\n";
+        /*
         strcat(koopa_str, "  ");
         strcat(koopa_str, myexp);
         strcat(koopa_str, " = le ");
@@ -544,9 +537,12 @@ public:
         strcat(koopa_str, ", ");
         strcat(koopa_str, exp2);
         strcat(koopa_str, "\n");
+        */
       }
       if (type == 5)
       {
+        koopa_string += "  " + myexp + " = ge " + exp1 + ", " + exp2 + "\n";
+        /*
         strcat(koopa_str, "  ");
         strcat(koopa_str, myexp);
         strcat(koopa_str, " = ge ");
@@ -554,6 +550,7 @@ public:
         strcat(koopa_str, ", ");
         strcat(koopa_str, exp2);
         strcat(koopa_str, "\n");
+        */
       }
       cur_num.push(exp_depth - 1);
     }
@@ -578,43 +575,37 @@ public:
       mulexp->Dump(fout, koopa_str);
       addexp->Dump(fout, koopa_str);
       int ttype;
-      char exp1[20];
-      char exp2[20];
-      memset(exp1, 0, sizeof(exp1));
-      memset(exp2, 0, sizeof(exp2));
-      // std::cout << "finish parsing both id"<<endl;
-      // std::cout << cur_num.size()<<endl;
+      string exp1;
+      string exp2;
       ttype = cur_num.top();
       cur_num.pop();
       if (ttype == -1)
       {
-        strcpy(exp1, to_string(imm_stack.top()).c_str());
+        exp1 = to_string(imm_stack.top());
         imm_stack.pop();
       }
       else
       {
-        exp1[0] = '%';
-        strcat(exp1, to_string(ttype).c_str());
+        exp1 = "%" + to_string(ttype);
       }
       ttype = cur_num.top();
       cur_num.pop();
       if (ttype == -1)
       {
-        strcpy(exp2, to_string(imm_stack.top()).c_str());
+        exp2 = to_string(imm_stack.top());
         imm_stack.pop();
       }
       else
       {
-        exp2[0] = '%';
-        strcat(exp2, to_string(ttype).c_str());
+        exp2 = "%" + to_string(ttype);
       }
-      char myexp[20];
-      memset(myexp, 0, sizeof(myexp));
-      myexp[0] = '%';
-      strcat(myexp, to_string(exp_depth).c_str());
+      string myexp;
+      myexp = "%" + to_string(exp_depth);
       exp_depth += 1;
       if (type == 2)
       {
+        koopa_string += "  " + myexp + " = add " + exp1 + ", " + exp2 + "\n";
+        /*
         strcat(koopa_str, "  ");
         strcat(koopa_str, myexp);
         strcat(koopa_str, " = add ");
@@ -622,9 +613,12 @@ public:
         strcat(koopa_str, ", ");
         strcat(koopa_str, exp2);
         strcat(koopa_str, "\n");
+        */
       }
       if (type == 3)
       {
+        koopa_string += "  " + myexp + " = sub " + exp1 + ", " + exp2 + "\n";
+        /*
         strcat(koopa_str, "  ");
         strcat(koopa_str, myexp);
         strcat(koopa_str, " = sub ");
@@ -632,6 +626,7 @@ public:
         strcat(koopa_str, ", ");
         strcat(koopa_str, exp2);
         strcat(koopa_str, "\n");
+        */
       }
       cur_num.push(exp_depth - 1);
       std::cout << "finish add without problem" << endl;
@@ -657,41 +652,37 @@ public:
       unaryexp->Dump(fout, koopa_str);
       mulexp->Dump(fout, koopa_str);
       int ttype;
-      char exp1[20];
-      char exp2[20];
-      memset(exp1, 0, sizeof(exp1));
-      memset(exp2, 0, sizeof(exp2));
+      string exp1;
+      string exp2;
       ttype = cur_num.top();
       cur_num.pop();
       if (ttype == -1)
       {
-        strcpy(exp1, to_string(imm_stack.top()).c_str());
+        exp1 = to_string(imm_stack.top());
         imm_stack.pop();
       }
       else
       {
-        exp1[0] = '%';
-        strcat(exp1, to_string(ttype).c_str());
+        exp1 = "%" + to_string(ttype);
       }
       ttype = cur_num.top();
       cur_num.pop();
       if (ttype == -1)
       {
-        strcpy(exp2, to_string(imm_stack.top()).c_str());
+        exp2 = to_string(imm_stack.top());
         imm_stack.pop();
       }
       else
       {
-        exp2[0] = '%';
-        strcat(exp2, to_string(ttype).c_str());
+        exp2 = "%" + to_string(ttype);
       }
-      char myexp[20];
-      memset(myexp, 0, sizeof(myexp));
-      myexp[0] = '%';
-      strcat(myexp, to_string(exp_depth).c_str());
+      string myexp;
+      myexp = "%" + to_string(exp_depth);
       exp_depth += 1;
       if (type == 2)
       {
+        koopa_string += "  " + myexp + " = mul " + exp1 + ", " + exp2 + "\n";
+        /*
         strcat(koopa_str, "  ");
         strcat(koopa_str, myexp);
         strcat(koopa_str, " = mul ");
@@ -699,9 +690,12 @@ public:
         strcat(koopa_str, ", ");
         strcat(koopa_str, exp2);
         strcat(koopa_str, "\n");
+        */
       }
       if (type == 3)
       {
+        koopa_string += "  " + myexp + " = div " + exp1 + ", " + exp2 + "\n";
+        /*
         strcat(koopa_str, "  ");
         strcat(koopa_str, myexp);
         strcat(koopa_str, " = div ");
@@ -709,9 +703,12 @@ public:
         strcat(koopa_str, ", ");
         strcat(koopa_str, exp2);
         strcat(koopa_str, "\n");
+        */
       }
       if (type == 4)
       {
+        koopa_string += "  " + myexp + " = mod " + exp1 + ", " + exp2 + "\n";
+        /*
         strcat(koopa_str, "  ");
         strcat(koopa_str, myexp);
         strcat(koopa_str, " = mod ");
@@ -719,6 +716,7 @@ public:
         strcat(koopa_str, ", ");
         strcat(koopa_str, exp2);
         strcat(koopa_str, "\n");
+        */
       }
       cur_num.push(exp_depth - 1);
     }
@@ -745,38 +743,40 @@ public:
       {
         int ttype = cur_num.top();
         cur_num.pop();
-        char exp1[20];
-        memset(exp1, 0, sizeof(exp1));
+        string exp1;
         if (ttype == -1)
         {
-          strcpy(exp1, to_string(imm_stack.top()).c_str());
+          exp1 = to_string(imm_stack.top());
           imm_stack.pop();
         }
         else
         {
-          exp1[0] = '%';
-          strcat(exp1, to_string(ttype).c_str());
+          exp1 = "%" + to_string(ttype);
         }
-        char myexp[20];
-        memset(myexp, 0, sizeof(myexp));
-        myexp[0] = '%';
-        strcat(myexp, to_string(exp_depth).c_str());
+        string myexp;
+        myexp = "%" + to_string(exp_depth);
         exp_depth += 1;
         if (type == 3)
         {
+          koopa_string += "  " + myexp + " = sub 0, " + exp1 + "\n";
+          /*
           strcat(koopa_str, "  ");
           strcat(koopa_str, myexp);
           strcat(koopa_str, " = sub 0, ");
           strcat(koopa_str, exp1);
           strcat(koopa_str, "\n");
+          */
         }
         if (type == 4)
         {
+          koopa_string += "  " + myexp + " = eq 0, " + exp1 + "\n";
+          /*
           strcat(koopa_str, "  ");
           strcat(koopa_str, myexp);
           strcat(koopa_str, " = eq 0, ");
           strcat(koopa_str, exp1);
           strcat(koopa_str, "\n");
+          */
         }
         cur_num.push(exp_depth - 1);
       }
@@ -824,11 +824,11 @@ public:
       if (ttype == 2)
       {
         std::cout << "no target in const symbol" << endl;
-        char myexp[20];
-        memset(myexp, 0, sizeof(myexp));
-        myexp[0] = '%';
-        strcat(myexp, to_string(exp_depth).c_str());
+        string myexp;
+        myexp = "%" + to_string(exp_depth);
+        koopa_string += "  " + myexp + " = load @" + lval + "_" + to_string(depth2) + "\n";
         cur_num.push(exp_depth);
+        /*
         strcat(koopa_str, "  %");
         strcat(koopa_str, to_string(exp_depth).c_str());
         strcat(koopa_str, " = load @");
@@ -836,6 +836,7 @@ public:
         strcat(koopa_str, "_");
         strcat(koopa_str, to_string(depth2).c_str());
         strcat(koopa_str, "\n");
+        */
         exp_depth++;
       }
       else
@@ -871,8 +872,11 @@ public:
   {
     std::cout << "in number" << endl;
     cur_num.push(-1);
+    std::cout << "in number1" << endl;
     imm_stack.push(num);
+    std::cout << "in number2" << endl;
     std::cout << num;
+    std::cout << "in number3" << endl;
   }
 };
 
@@ -1032,22 +1036,28 @@ public:
     if (type == 1)
     {
       vardef->Dump(fout, koopa_str);
+      koopa_string += "  @" + lval + "_" + to_string(block_depth) + " = alloc i32\n";
+      /* 
       strcat(koopa_str, "  @");
       strcat(koopa_str, lval.c_str());
       strcat(koopa_str, "_");
       strcat(koopa_str, to_string(block_depth).c_str());
       strcat(koopa_str, " = alloc i32\n");
+      */
       var_symtbl_b[block_depth][lval] = "";
     }
     if (type == 2)
     {
       vardef->Dump(fout, koopa_str);
       initval->Dump(fout, koopa_str);
+      koopa_string += "  @" + lval + "_" + to_string(block_depth) + " = alloc i32\n";
+      /*
       strcat(koopa_str, "  @");
       strcat(koopa_str, lval.c_str());
       strcat(koopa_str, "_");
       strcat(koopa_str, to_string(block_depth).c_str());
       strcat(koopa_str, " = alloc i32\n");
+      */
       int ttype = cur_num.top();
       cur_num.pop();
       std::cout << "fine in type2" << endl;
@@ -1057,6 +1067,8 @@ public:
         imm_stack.pop();
 
         var_symtbl_b[block_depth][lval] = to_string(tmp);
+        koopa_string += "  store " + var_symtbl_b[block_depth][lval] + " ,@" + lval + "_" + to_string(block_depth) + "\n";
+        /*
         strcat(koopa_str, "  store ");
         strcat(koopa_str, var_symtbl_b[block_depth][lval].c_str());
         strcat(koopa_str, " ,@");
@@ -1064,10 +1076,13 @@ public:
         strcat(koopa_str, "_");
         strcat(koopa_str, to_string(block_depth).c_str());
         strcat(koopa_str, "\n");
+        */
       }
       else
       {
         var_symtbl_b[block_depth][lval] = "%" + to_string(ttype);
+        koopa_string += "  store " + var_symtbl_b[block_depth][lval] + " ,@" + lval + "_" + to_string(block_depth) + "\n";
+        /*
         strcat(koopa_str, "  store ");
         strcat(koopa_str, var_symtbl_b[block_depth][lval].c_str());
         strcat(koopa_str, " ,@");
@@ -1075,25 +1090,32 @@ public:
         strcat(koopa_str, "_");
         strcat(koopa_str, to_string(block_depth).c_str());
         strcat(koopa_str, "\n");
+        */
       }
     }
     if (type == 3)
     {
+      koopa_string += "  @" + lval + "_" + to_string(block_depth) + " = alloc i32\n";
+      /*
       strcat(koopa_str, "  @");
       strcat(koopa_str, lval.c_str());
       strcat(koopa_str, "_");
       strcat(koopa_str, to_string(block_depth).c_str());
       strcat(koopa_str, " = alloc i32\n");
+      */
       var_symtbl_b[block_depth][lval] = "";
     }
     if (type == 4)
     {
       initval->Dump(fout, koopa_str);
+      koopa_string += "  @" + lval + "_" + to_string(block_depth) + " = alloc i32\n";
+      /*
       strcat(koopa_str, "  @");
       strcat(koopa_str, lval.c_str());
       strcat(koopa_str, "_");
       strcat(koopa_str, to_string(block_depth).c_str());
       strcat(koopa_str, " = alloc i32\n");
+      */
       int ttype = cur_num.top();
       cur_num.pop();
       std::cout << "fine in type4" << endl;
@@ -1106,6 +1128,9 @@ public:
         var_symtbl_b[block_depth][lval] = to_string(tmp);
         std::cout << var_symtbl_b[block_depth][lval] << endl;
         std::cout << "fine in type442" << endl;
+        
+        koopa_string += "  store " + var_symtbl_b[block_depth][lval] + " ,@" + lval + "_" + to_string(block_depth) + "\n";
+        /*
         strcat(koopa_str, "  store ");
         strcat(koopa_str, var_symtbl_b[block_depth][lval].c_str());
         strcat(koopa_str, " ,@");
@@ -1113,12 +1138,15 @@ public:
         strcat(koopa_str, "_");
         strcat(koopa_str, to_string(block_depth).c_str());
         strcat(koopa_str, "\n");
+        */
         std::cout << "going out" << endl;
       }
       else
       {
         var_symtbl_b[block_depth][lval] = "%" + to_string(ttype);
         std::cout << "fine in type4" << endl;
+        koopa_string += "  store " + var_symtbl_b[block_depth][lval] + " ,@" + lval + "_" + to_string(block_depth) + "\n";
+        /*
         strcat(koopa_str, "  store ");
         strcat(koopa_str, var_symtbl_b[block_depth][lval].c_str());
         strcat(koopa_str, " ,@");
@@ -1126,6 +1154,7 @@ public:
         strcat(koopa_str, "_");
         strcat(koopa_str, to_string(block_depth).c_str());
         strcat(koopa_str, "\n");
+        */
       }
     }
   }
