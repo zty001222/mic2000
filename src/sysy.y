@@ -91,7 +91,16 @@ FuncType
 Block
   : '{' BlockItem '}' {
     auto block = new BlockAST();
+    block -> type = 1;
     block->blockitem = unique_ptr<BaseAST>($2);
+    $$ = block;
+  }
+  ;
+
+Block
+  : '{'  '}' {
+    auto block = new BlockAST();
+    block -> type = 2;
     $$ = block;
   }
   ;
@@ -134,17 +143,6 @@ BlockItem
     $$ = blockitem;
   }
   ;
-
-Stmt
-  : IDENT '=' Exp ';' {
-    auto stmt = new StmtAST();
-    stmt -> exp = unique_ptr<BaseAST>($3);
-    stmt -> lval = *unique_ptr<string>($1);
-    stmt -> type = 2;
-    $$ = stmt;
-  }
-  ;
-
 
 Decl
   : ConstDecl{
@@ -276,6 +274,51 @@ Stmt
     $$ = stmt;
   }
   ;
+
+Stmt
+  : IDENT '=' Exp ';' {
+    auto stmt = new StmtAST();
+    stmt -> exp = unique_ptr<BaseAST>($3);
+    stmt -> lval = *unique_ptr<string>($1);
+    stmt -> type = 2;
+    $$ = stmt;
+  }
+  ;
+
+Stmt
+  : RETURN ';' {
+    auto stmt = new StmtAST();
+    stmt -> type = 3;
+    $$ = stmt;
+  }
+  ;
+
+Stmt
+  : Exp ';' {
+    auto stmt = new StmtAST();
+    stmt -> exp = unique_ptr<BaseAST>($1);
+    stmt -> type = 4;
+    $$ = stmt;
+  }
+  ;
+
+Stmt
+  : ';' {
+    auto stmt = new StmtAST();
+    stmt -> type = 5;
+    $$ = stmt;
+  }
+  ;
+
+Stmt
+  : Block {
+    auto stmt = new StmtAST();
+    stmt -> block = unique_ptr<BaseAST>($1);
+    stmt -> type = 6;
+    $$ = stmt;
+  }
+  ;
+
 
 Exp
   : LOrExp {
