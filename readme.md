@@ -135,3 +135,32 @@ LOrExp      ::= LAndExp | LOrExp "||" LAndExp;
       myexp[0] = '%';
       strcat(myexp, to_string(exp_depth).c_str());
       
+
+      string exp1;
+      string exp2;
+      ttype = cur_num.top();
+      cur_num.pop();
+      if (ttype == -1)
+      {
+        exp1 = to_string(imm_stack.top());
+        imm_stack.pop();
+      }
+      else
+      {
+        exp1 = "%" + to_string(ttype);
+      }
+      ttype = cur_num.top();
+      cur_num.pop();
+      if (ttype == -1)
+      {
+        exp2 = to_string(imm_stack.top());
+        imm_stack.pop();
+      }
+      else
+      {
+        exp2 = "%" + to_string(ttype);
+      }
+
+
+      koopa_string += "  " + myexp + " = ge " + exp1 + ", " + exp2 + "\n";
+        
