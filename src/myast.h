@@ -21,9 +21,14 @@ static map<std::string, std::string> const_symtbl;
 static map<std::string, std::string> var_symtbl;
 static vector<map<std::string, std::string> > var_symtbl_b;
 static vector<map<std::string, std::string> > const_symtbl_b;
+static vector<map<std::string, std::string> > saved_var_symtbl_b;
+static vector<map<std::string, std::string> > saved_const_symtbl_b;
 static int exp_depth;
 static int block_depth;
-static int terminated = 0;
+static int max_block_depth;
+static vector<int> terminated;
+static int ifcnt = 0;
+static int elsecnt = 0;
 static std::string koopa_string;
 class BaseAST
 {
@@ -71,8 +76,11 @@ public:
   std::string functype;
   void Dump(FILE *fout, char *koopa_str) const override
   {
+    terminated.push_back(0);
     var_symtbl_b.push_back(*(new map<std::string, std::string>()));
     const_symtbl_b.push_back(*(new map<std::string, std::string>()));
+    saved_var_symtbl_b.push_back(*(new map<std::string, std::string>()));
+    saved_const_symtbl_b.push_back(*(new map<std::string, std::string>()));
     std::cout << "in functype" << endl;
     koopa_string += " i32 {\n%entry:\n";
   }
@@ -96,17 +104,19 @@ public:
   std::unique_ptr<BaseAST> exp;
   std::string lval;
   std::unique_ptr<BaseAST> block;
+  std::unique_ptr<BaseAST> ifstmt;
+  std::unique_ptr<BaseAST> elsestmt;
   int type;
   void Dump(FILE *fout, char *koopa_str) const override
   {
     std::cout << "in stmt" << endl;
-    if (terminated)
+    if (terminated.back())
     {
       return;
     }
-    if ((type == 1 || type == 3) && !terminated)
+    if ((type == 1 || type == 3) && !terminated.back())
     {
-      terminated = 1;
+      terminated.back() = 1;
       std::cout << "StmtAST { ";
       exp->Dump(fout, koopa_str);
       koopa_string += "  ret ";
@@ -175,15 +185,99 @@ public:
     {
       // happy 
     }
-    else
+    else if(type == 6)
     {
       block_depth += 1;
+      if(block_depth > max_block_depth){
+        saved_var_symtbl_b.push_back(*(new map<std::string, std::string>()));
+        saved_const_symtbl_b.push_back(*(new map<std::string, std::string>()));
+        max_block_depth = block_depth;
+      }
       var_symtbl_b.push_back(*(new map<std::string, std::string>()));
       const_symtbl_b.push_back(*(new map<std::string, std::string>()));
+      max_block_depth = block_depth;
       block->Dump(fout, koopa_str);
       var_symtbl_b.pop_back();
       const_symtbl_b.pop_back();
       block_depth -= 1;
+    }
+    else if(type == 7){
+      exp -> Dump(fout, koopa_str);
+      int ttype = cur_num.top();
+      cur_num.pop();
+      int thiscnt = ifcnt;
+      ifcnt += 1;
+      if(ttype == -1){
+        cout<<"exp is number"<<endl;
+        int num = imm_stack.top();
+        imm_stack.pop();
+        koopa_string += "  %" + to_string(exp_depth) + " = add " + to_string(num) + ", 0\n";
+        koopa_string += "  br %" + to_string(exp_depth) + ", %then" + to_string(thiscnt) + ", %end" + to_string(thiscnt) + "\n";
+        koopa_string += "%then" + to_string(thiscnt) + ":\n";
+        terminated.push_back(0);
+        exp_depth += 1;
+        ifstmt -> Dump(fout, koopa_str);
+        if(!terminated.back())
+           koopa_string += "  jump %end" + to_string(thiscnt) + "\n";
+        terminated.pop_back();
+        koopa_string += "%end" + to_string(thiscnt) + ":\n";
+      }
+      else{
+        koopa_string += "  br %" + to_string(ttype) + ", %then" + to_string(thiscnt) + ", %end" + to_string(thiscnt) + "\n";
+        koopa_string += "%then" + to_string(thiscnt) + ":\n";
+        terminated.push_back(0);
+        ifstmt -> Dump(fout, koopa_str);
+        if(!terminated.back())
+           koopa_string += "  jump %end" + to_string(thiscnt) + "\n";
+        terminated.pop_back();
+        koopa_string += "%end" + to_string(thiscnt) + ":\n";
+      }
+    }
+    else if(type == 8){
+      exp -> Dump(fout, koopa_str);
+      int ttype = cur_num.top();
+      cur_num.pop();
+      int thiscnt = ifcnt;
+      ifcnt += 1;
+      int thiselsecnt = elsecnt;
+      elsecnt += 1;
+      if(ttype == -1){
+        cout<<"exp is number"<<endl;
+        int num = imm_stack.top();
+        imm_stack.pop();
+        koopa_string += "  %" + to_string(exp_depth) + " = add " + to_string(num) + ", 0\n";
+        koopa_string += "  br %" + to_string(exp_depth) + ", %then" + to_string(thiscnt) + ", %else" + to_string(thiselsecnt) + "\n";
+        koopa_string += "%then" + to_string(thiscnt) + ":\n";
+        terminated.push_back(0);
+        exp_depth += 1;
+        ifstmt -> Dump(fout, koopa_str);
+        if(!terminated.back())
+           koopa_string += "  jump %end" + to_string(thiscnt) + "\n";
+        terminated.pop_back();
+        koopa_string += "%else" + to_string(thiselsecnt) + ":\n";
+        terminated.push_back(0);
+        elsestmt -> Dump(fout, koopa_str);
+        if(!terminated.back())
+           koopa_string += "  jump %end" + to_string(thiscnt) + "\n";
+        terminated.pop_back();
+        koopa_string += "%end" + to_string(thiscnt) + ":\n";
+      }
+      else{
+        koopa_string += "  br %" + to_string(ttype) + ", %then" + to_string(thiscnt) + ", %else" + to_string(thiselsecnt) + "\n";
+        koopa_string += "%then" + to_string(thiscnt) + ":\n";
+        terminated.push_back(0);
+        ifstmt -> Dump(fout, koopa_str);
+        if(!terminated.back())
+           koopa_string += "  jump %end" + to_string(thiscnt) + "\n";
+        terminated.pop_back();
+        koopa_string += "%else" + to_string(thiselsecnt) + ":\n";
+        terminated.push_back(0);
+        elsestmt -> Dump(fout, koopa_str);
+        if(!terminated.back())
+           koopa_string += "  jump %end" + to_string(thiscnt) + "\n";
+        terminated.pop_back();
+        koopa_string += "%end" + to_string(thiscnt) + ":\n";
+      }
     }
   }
 };
@@ -709,7 +803,7 @@ public:
   int type;
   void Dump(FILE *fout, char *koopa_str) const override
   {
-    if (terminated)
+    if (terminated.back())
     {
       return;
     }
@@ -718,7 +812,7 @@ public:
     {
       std::cout << "    type1" << endl;
       blockitem->Dump(fout, koopa_str);
-      if (terminated)
+      if (terminated.back())
       {
         return;
       }
@@ -728,7 +822,7 @@ public:
     {
       std::cout << "    type2" << endl;
       blockitem->Dump(fout, koopa_str);
-      if (terminated)
+      if (terminated.back())
       {
         return;
       }
@@ -854,14 +948,22 @@ public:
     if (type == 1)
     {
       vardef->Dump(fout, koopa_str);
-      koopa_string += "  @" + lval + "_" + to_string(block_depth) + " = alloc i32\n";
-      var_symtbl_b[block_depth][lval] = "";
+      if(saved_var_symtbl_b[block_depth].find(lval) == saved_var_symtbl_b[block_depth].end()){
+        koopa_string += "  @" + lval + "_" + to_string(block_depth) + " = alloc i32\n";
+        var_symtbl_b[block_depth][lval] = "";
+        saved_var_symtbl_b[block_depth][lval] = "";
+      }
+      else{
+        var_symtbl_b[block_depth][lval] = "";
+      }
     }
     if (type == 2)
     {
       vardef->Dump(fout, koopa_str);
       initval->Dump(fout, koopa_str);
-      koopa_string += "  @" + lval + "_" + to_string(block_depth) + " = alloc i32\n";
+      if(saved_var_symtbl_b[block_depth].find(lval) == saved_var_symtbl_b[block_depth].end()){
+        koopa_string += "  @" + lval + "_" + to_string(block_depth) + " = alloc i32\n";
+      }
       int ttype = cur_num.top();
       cur_num.pop();
       std::cout << "fine in type2" << endl;
@@ -871,23 +973,30 @@ public:
         imm_stack.pop();
 
         var_symtbl_b[block_depth][lval] = to_string(tmp);
+        saved_var_symtbl_b[block_depth][lval] = to_string(tmp);
         koopa_string += "  store " + var_symtbl_b[block_depth][lval] + " ,@" + lval + "_" + to_string(block_depth) + "\n";
       }
       else
       {
         var_symtbl_b[block_depth][lval] = "%" + to_string(ttype);
+        saved_var_symtbl_b[block_depth][lval] = "%" + to_string(ttype);
         koopa_string += "  store " + var_symtbl_b[block_depth][lval] + " ,@" + lval + "_" + to_string(block_depth) + "\n";
       }
     }
     if (type == 3)
     {
-      koopa_string += "  @" + lval + "_" + to_string(block_depth) + " = alloc i32\n";
-      var_symtbl_b[block_depth][lval] = "";
+      if(saved_var_symtbl_b[block_depth].find(lval) == saved_var_symtbl_b[block_depth].end()){
+        koopa_string += "  @" + lval + "_" + to_string(block_depth) + " = alloc i32\n";
+        var_symtbl_b[block_depth][lval] = "";
+        saved_var_symtbl_b[block_depth][lval] = "";
+      }
     }
     if (type == 4)
     {
       initval->Dump(fout, koopa_str);
-      koopa_string += "  @" + lval + "_" + to_string(block_depth) + " = alloc i32\n";
+      if(saved_var_symtbl_b[block_depth].find(lval) == saved_var_symtbl_b[block_depth].end()){
+        koopa_string += "  @" + lval + "_" + to_string(block_depth) + " = alloc i32\n";
+      }
       int ttype = cur_num.top();
       cur_num.pop();
       std::cout << "fine in type4" << endl;
@@ -898,6 +1007,7 @@ public:
         imm_stack.pop();
         std::cout << "fine in type44" << endl;
         var_symtbl_b[block_depth][lval] = to_string(tmp);
+        saved_var_symtbl_b[block_depth][lval] = to_string(tmp);
         std::cout << var_symtbl_b[block_depth][lval] << endl;
         std::cout << "fine in type442" << endl;
         
@@ -907,6 +1017,7 @@ public:
       else
       {
         var_symtbl_b[block_depth][lval] = "%" + to_string(ttype);
+        saved_var_symtbl_b[block_depth][lval] = "%" + to_string(ttype);
         std::cout << "fine in type4" << endl;
         koopa_string += "  store " + var_symtbl_b[block_depth][lval] + " ,@" + lval + "_" + to_string(block_depth) + "\n";
       }

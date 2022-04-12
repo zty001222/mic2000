@@ -1,0 +1,437 @@
+-riscv
+CompUnitAST { FuncDefAST { in functype
+, main, in block
+in blockitem
+    type1
+in blockitem
+    type1
+in blockitem
+    type2
+in blockitem
+    type2
+in blockitem
+    type1
+in blockitem
+    type2
+in blockitem
+    type2
+in blockitem
+    type3
+in decl
+in var decl
+in var def
+in decl
+in const decl
+in const def
+in const init val
+in const exp
+in exp
+in lorexp
+in landexp
+in eqexp
+in rel exp
+in add
+in mul
+in unary
+in primaryexp
+in number
+11in add
+in mul
+in unary
+in primaryexp
+in number
+10finish add without problem
+in decl
+in var decl
+in var def
+in init val
+in exp
+in lorexp
+in landexp
+in eqexp
+in rel exp
+in add
+in mul
+in unary
+in primaryexp
+in primaryexp and going to parse lval
+after this, target become:%0
+fine in type2
+in stmt
+in exp
+in lorexp
+in landexp
+in eqexp
+in rel exp
+in add
+in mul
+in unary
+in primaryexp
+in number
+1in add
+in mul
+in unary
+in primaryexp
+in primaryexp and going to parse lval
+no target in const symbol
+finish add without problem
+give exprin decl
+in const decl
+in const def
+in const init val
+in const exp
+in exp
+in lorexp
+in landexp
+in eqexp
+in rel exp
+in add
+in mul
+in unary
+in primaryexp
+in number
+7in mul
+in unary
+in primaryexp
+in primaryexp and going to parse lval
+after this, target become:%0
+in decl
+in var decl
+in var def
+in var def
+in init val
+in exp
+in lorexp
+in landexp
+in eqexp
+in rel exp
+in add
+in mul
+in unary
+in primaryexp
+in primaryexp and going to parse lval
+no target in const symbol
+in add
+in mul
+in unary
+in primaryexp
+in primaryexp and going to parse lval
+after this, target become:%3
+finish add without problem
+fine in type2
+in init val
+in exp
+in lorexp
+in landexp
+in eqexp
+in rel exp
+in add
+in mul
+in unary
+in primaryexp
+in primaryexp and going to parse lval
+no target in const symbol
+in add
+in mul
+in unary
+in primaryexp
+in primaryexp and going to parse lval
+after this, target become:%3
+finish add without problem
+fine in type2
+in stmt
+in exp
+in lorexp
+in landexp
+in eqexp
+in rel exp
+in add
+in mul
+in unary
+in primaryexp
+in number
+1in mul
+in unary
+in primaryexp
+in number
+1in mul
+in unary
+in primaryexp
+in number
+1in mul
+in unary
+in primaryexp
+in primaryexp and going to parse lval
+no target in const symbol
+give exprin stmt
+StmtAST { in exp
+in lorexp
+in landexp
+in eqexp
+in rel exp
+in add
+in mul
+in unary
+in primaryexp
+in primaryexp and going to parse lval
+no target in const symbol
+in add
+in mul
+in unary
+in primaryexp
+in primaryexp and going to parse lval
+no target in const symbol
+finish add without problem
+expr } } }
+in program
+usable regs:0 1 2 3 4 5 6 
+usable regs:0 1 2 3 4 5 6 
+in slice func
+in func
+usable regs:0 1 2 3 4 5 6 
+in slice block
+in block
+in visit block, instlen:25 paramslen:0
+usable regs:0 1 2 3 4 5 6 
+in slice value
+value name : @x
+usable regs:0 1 2 3 4 5 6 
+in value nostore
+in visit alloc
+in slice value
+no name
+usable regs:0 1 2 3 4 5 6 
+in value nostore
+in visit bin
+in bin
+no name
+usable regs:0 1 2 3 4 5 6 
+in value nostore
+in visit int
+in integer
+10
+no name
+usable regs:1 2 3 4 5 6 
+in value nostore
+in visit int
+in integer
+11
+in bin op
+in add
+in slice value
+value name : @y
+usable regs:0 1 2 3 4 5 6 
+in value nostore
+in visit alloc
+in slice value
+no name
+usable regs:0 1 2 3 4 5 6 
+in value nostore
+in visit store
+no name
+in value in stored
+in slice value
+no name
+usable regs:0 1 2 3 4 5 6 
+in value nostore
+0x18f5d20
+load name:@y
+in visit load
+in slice value
+no name
+usable regs:0 1 2 3 4 5 6 
+in value nostore
+in visit bin
+in bin
+no name
+in value in stored
+no name
+usable regs:1 2 3 4 5 6 
+in value nostore
+in visit int
+in integer
+1
+in bin op
+in add
+in slice value
+no name
+usable regs:0 1 2 3 4 5 6 
+in value nostore
+in visit store
+no name
+in value in stored
+in slice value
+no name
+usable regs:0 1 2 3 4 5 6 
+in value nostore
+in visit bin
+in bin
+no name
+in value in stored
+no name
+usable regs:1 2 3 4 5 6 
+in value nostore
+in visit int
+in integer
+7
+in bin op
+in mul
+in slice value
+no name
+usable regs:0 1 2 3 4 5 6 
+in value nostore
+0x18f5830
+load name:@x
+in visit load
+in slice value
+no name
+usable regs:0 1 2 3 4 5 6 
+in value nostore
+in visit bin
+in bin
+no name
+in value in stored
+no name
+in value in stored
+in bin op
+in sub
+in slice value
+value name : @z
+usable regs:0 1 2 3 4 5 6 
+in value nostore
+in visit alloc
+in slice value
+no name
+usable regs:0 1 2 3 4 5 6 
+in value nostore
+in visit store
+no name
+in value in stored
+in slice value
+no name
+usable regs:0 1 2 3 4 5 6 
+in value nostore
+0x18f5d20
+load name:@y
+in visit load
+in slice value
+no name
+usable regs:0 1 2 3 4 5 6 
+in value nostore
+in visit bin
+in bin
+no name
+in value in stored
+no name
+in value in stored
+in bin op
+in sub
+in slice value
+value name : @w
+usable regs:0 1 2 3 4 5 6 
+in value nostore
+in visit alloc
+in slice value
+no name
+usable regs:0 1 2 3 4 5 6 
+in value nostore
+in visit store
+no name
+in value in stored
+in slice value
+no name
+usable regs:0 1 2 3 4 5 6 
+in value nostore
+0x18f0c10
+load name:@w
+in visit load
+in slice value
+no name
+usable regs:0 1 2 3 4 5 6 
+in value nostore
+in visit bin
+in bin
+no name
+in value in stored
+no name
+usable regs:1 2 3 4 5 6 
+in value nostore
+in visit int
+in integer
+1
+in bin op
+in mul
+in slice value
+no name
+usable regs:0 1 2 3 4 5 6 
+in value nostore
+in visit bin
+in bin
+no name
+in value in stored
+no name
+usable regs:1 2 3 4 5 6 
+in value nostore
+in visit int
+in integer
+1
+in bin op
+in mul
+in slice value
+no name
+usable regs:0 1 2 3 4 5 6 
+in value nostore
+in visit bin
+in bin
+no name
+in value in stored
+no name
+usable regs:1 2 3 4 5 6 
+in value nostore
+in visit int
+in integer
+1
+in bin op
+in mul
+in slice value
+no name
+usable regs:0 1 2 3 4 5 6 
+in value nostore
+in visit store
+no name
+in value in stored
+in slice value
+no name
+usable regs:0 1 2 3 4 5 6 
+in value nostore
+0x18f0c10
+load name:@w
+in visit load
+in slice value
+no name
+usable regs:0 1 2 3 4 5 6 
+in value nostore
+0x18f6490
+load name:@z
+in visit load
+in slice value
+no name
+usable regs:0 1 2 3 4 5 6 
+in value nostore
+in visit bin
+in bin
+no name
+in value in stored
+no name
+in value in stored
+in bin op
+in add
+in slice value
+no name
+usable regs:0 1 2 3 4 5 6 
+in value nostore
+in visit ret
+in ret
+no name
+in value in stored
+usable regs:0 1 2 3 4 5 6 
