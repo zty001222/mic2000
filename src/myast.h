@@ -26,6 +26,7 @@ static vector<map<std::string, std::string> > saved_const_symtbl_b;
 static int exp_depth;
 static int block_depth;
 static int max_block_depth;
+static bool optrue = 0;
 static vector<int> terminated;
 static int ifcnt = 0;
 static int elsecnt = 0;
@@ -208,30 +209,19 @@ public:
       int thiscnt = ifcnt;
       ifcnt += 1;
       if(ttype == -1){
-        cout<<"exp is number"<<endl;
-        int num = imm_stack.top();
+        koopa_string += "  br " + to_string(imm_stack.top()) + ", %then" + to_string(thiscnt) + ", %end" + to_string(thiscnt) + "\n";
         imm_stack.pop();
-        koopa_string += "  %" + to_string(exp_depth) + " = add " + to_string(num) + ", 0\n";
-        koopa_string += "  br %" + to_string(exp_depth) + ", %then" + to_string(thiscnt) + ", %end" + to_string(thiscnt) + "\n";
-        koopa_string += "%then" + to_string(thiscnt) + ":\n";
-        terminated.push_back(0);
-        exp_depth += 1;
-        ifstmt -> Dump(fout, koopa_str);
-        if(!terminated.back())
-           koopa_string += "  jump %end" + to_string(thiscnt) + "\n";
-        terminated.pop_back();
-        koopa_string += "%end" + to_string(thiscnt) + ":\n";
       }
       else{
         koopa_string += "  br %" + to_string(ttype) + ", %then" + to_string(thiscnt) + ", %end" + to_string(thiscnt) + "\n";
-        koopa_string += "%then" + to_string(thiscnt) + ":\n";
-        terminated.push_back(0);
-        ifstmt -> Dump(fout, koopa_str);
-        if(!terminated.back())
-           koopa_string += "  jump %end" + to_string(thiscnt) + "\n";
-        terminated.pop_back();
-        koopa_string += "%end" + to_string(thiscnt) + ":\n";
       }
+      koopa_string += "%then" + to_string(thiscnt) + ":\n";
+      terminated.push_back(0);
+      ifstmt -> Dump(fout, koopa_str);
+      if(!terminated.back())
+          koopa_string += "  jump %end" + to_string(thiscnt) + "\n";
+      terminated.pop_back();
+      koopa_string += "%end" + to_string(thiscnt) + ":\n";
     }
     else if(type == 8){
       exp -> Dump(fout, koopa_str);
@@ -242,42 +232,25 @@ public:
       int thiselsecnt = elsecnt;
       elsecnt += 1;
       if(ttype == -1){
-        cout<<"exp is number"<<endl;
-        int num = imm_stack.top();
+        koopa_string += "  br " + to_string(imm_stack.top()) + ", %then" + to_string(thiscnt) + ", %else" + to_string(thiselsecnt) + "\n";  
         imm_stack.pop();
-        koopa_string += "  %" + to_string(exp_depth) + " = add " + to_string(num) + ", 0\n";
-        koopa_string += "  br %" + to_string(exp_depth) + ", %then" + to_string(thiscnt) + ", %else" + to_string(thiselsecnt) + "\n";
-        koopa_string += "%then" + to_string(thiscnt) + ":\n";
-        terminated.push_back(0);
-        exp_depth += 1;
-        ifstmt -> Dump(fout, koopa_str);
-        if(!terminated.back())
-           koopa_string += "  jump %end" + to_string(thiscnt) + "\n";
-        terminated.pop_back();
-        koopa_string += "%else" + to_string(thiselsecnt) + ":\n";
-        terminated.push_back(0);
-        elsestmt -> Dump(fout, koopa_str);
-        if(!terminated.back())
-           koopa_string += "  jump %end" + to_string(thiscnt) + "\n";
-        terminated.pop_back();
-        koopa_string += "%end" + to_string(thiscnt) + ":\n";
       }
       else{
         koopa_string += "  br %" + to_string(ttype) + ", %then" + to_string(thiscnt) + ", %else" + to_string(thiselsecnt) + "\n";
-        koopa_string += "%then" + to_string(thiscnt) + ":\n";
-        terminated.push_back(0);
-        ifstmt -> Dump(fout, koopa_str);
-        if(!terminated.back())
-           koopa_string += "  jump %end" + to_string(thiscnt) + "\n";
-        terminated.pop_back();
-        koopa_string += "%else" + to_string(thiselsecnt) + ":\n";
-        terminated.push_back(0);
-        elsestmt -> Dump(fout, koopa_str);
-        if(!terminated.back())
-           koopa_string += "  jump %end" + to_string(thiscnt) + "\n";
-        terminated.pop_back();
-        koopa_string += "%end" + to_string(thiscnt) + ":\n";
       }
+      koopa_string += "%then" + to_string(thiscnt) + ":\n";
+      terminated.push_back(0);
+      ifstmt -> Dump(fout, koopa_str);
+      if(!terminated.back())
+          koopa_string += "  jump %end" + to_string(thiscnt) + "\n";
+      terminated.pop_back();
+      koopa_string += "%else" + to_string(thiselsecnt) + ":\n";
+      terminated.push_back(0);
+      elsestmt -> Dump(fout, koopa_str);
+      if(!terminated.back())
+          koopa_string += "  jump %end" + to_string(thiscnt) + "\n";
+      terminated.pop_back();
+      koopa_string += "%end" + to_string(thiscnt) + ":\n";
     }
   }
 };
@@ -317,8 +290,14 @@ public:
       cur_num.pop();
       if (ttype == -1)
       {
+        int tmp = imm_stack.top();
         exp1 = to_string(imm_stack.top());
         imm_stack.pop();
+        if(tmp != 0){
+          imm_stack.push(1);
+          cur_num.push(-1);
+          return;
+        }
       }
       else
       {
@@ -377,8 +356,14 @@ public:
       cur_num.pop();
       if (ttype == -1)
       {
+        int tmp = imm_stack.top();
         exp1 = to_string(imm_stack.top());
         imm_stack.pop();
+        if(tmp == 0){
+          imm_stack.push(0);
+          cur_num.push(-1);
+          return;
+        }
       }
       else
       {
