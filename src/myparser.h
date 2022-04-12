@@ -35,6 +35,8 @@ void Visit(const koopa_raw_binary_t &bin);
 void Visit(const koopa_raw_binary_op_t &op);
 void Visit(const koopa_raw_store_t &store);
 void Visit(const koopa_raw_load_t &load);
+void Visit(const koopa_raw_jump_t &jmp);
+void Visit(const koopa_raw_branch_t &branch);
 void show_usable_regs();
 void deal_with_IR(const char * str);
 
@@ -120,8 +122,7 @@ void Visit(const koopa_raw_slice_t &slice) {
 void Visit(const koopa_raw_function_t &func) {
   cout<<"in func"<<endl;
   // 执行一些其他的必要操作
-  strcat(asm_out, "  .globl main\nmain:\n");
-  strcat(asm_out, "  addi sp, sp, -1024\n");
+  strcat(asm_out, "  .globl main\n");
   // 访问所有基本块
   Visit(func->bbs);
 }
@@ -130,6 +131,14 @@ void Visit(const koopa_raw_function_t &func) {
 void Visit(const koopa_raw_basic_block_t &bb) {
   cout<<"in block"<<endl;
   // 执行一些其他的必要操作
+  if(strcmp(bb->name,"%entry") == 0){
+    strcat(asm_out,"main:\n");
+    strcat(asm_out, "  addi sp, sp, -1024\n");
+  }
+  else{
+    strcat(asm_out,bb->name + 1);
+    strcat(asm_out,":\n");
+  }
   std::cout<<"in visit block, instlen:"<<bb->insts.len<<" paramslen:"<<bb->params.len<<endl;
   // 访问所有指令
   Visit(bb->insts);
@@ -261,12 +270,47 @@ void Visit(const koopa_raw_value_t &value) {
           sp_max+=4;
           break;
       }
+      case KOOPA_RVT_BRANCH:
+          cout<<"in branch"<<endl;
+          Visit(kind.data.branch);
+          break;
+      case KOOPA_RVT_JUMP:
+          cout<<"in jump"<<endl;  
+          Visit(kind.data.jump);
+          break;
       default:
         // 其他类型暂时遇不到
         assert(false);
     }
   }
 }
+
+void Visit(const koopa_raw_branch_t &branch){
+  cout<<"in branch"<<endl;
+  cout<<branch.true_bb->name<<endl;
+  Visit(branch.cond);
+  int reg = calstack.top();
+  calstack.pop();
+  strcat(asm_out, "  bnez t");
+  strcat(asm_out, to_string(reg).c_str());
+  strcat(asm_out, ", ");
+  strcat(asm_out, branch.true_bb->name + 1);
+  strcat(asm_out, "\n");
+  strcat(asm_out, "  j ");
+  strcat(asm_out, branch.false_bb->name + 1);
+  strcat(asm_out, "\n");
+}
+
+void Visit(const koopa_raw_jump_t &jmp){
+  cout<<"in jmp"<<endl;
+  cout<<jmp.target->name<<endl;
+  char name[20];
+  strcpy(name, jmp.target->name + 1);
+  strcat(asm_out, "  j ");
+  strcat(asm_out, name);
+  strcat(asm_out, "\n");
+}
+
 void Visit(const koopa_raw_integer_t &intval){
   std::cout<<"in integer"<<endl;
   cout<<intval.value<<endl;
