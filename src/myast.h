@@ -28,6 +28,8 @@ static int block_depth;
 static int max_block_depth;
 static bool optrue = 0;
 static vector<int> terminated;
+static int whilecnt = 0;
+static int cur_while = 0;
 static int ifcnt = 0;
 static int elsecnt = 0;
 static std::string koopa_string;
@@ -251,6 +253,36 @@ public:
           koopa_string += "  jump %end" + to_string(thiscnt) + "\n";
       terminated.pop_back();
       koopa_string += "%end" + to_string(thiscnt) + ":\n";
+    }
+    else if(type == 9){
+      int thiscnt = whilecnt;
+      cur_while = thiscnt;
+      ifcnt += 1;
+      koopa_string += "  jump %while_entry" + to_string(thiscnt) + "\n";
+      koopa_string += "%while_entry" + to_string(thiscnt) + ":\n";
+      exp -> Dump(fout, koopa_str);
+      //refresh cur while loop
+      cur_while = thiscnt;
+      int ttype = cur_num.top();
+      cur_num.pop();
+      if(ttype == -1){
+        koopa_string += "  br " + to_string(imm_stack.top()) + ", %while_body" + to_string(thiscnt) + ", %while_end" + to_string(thiscnt) + "\n";  
+        imm_stack.pop();
+      }
+      else{
+        koopa_string += "  br %" + to_string(ttype) + ", %while_body" + to_string(thiscnt) + ", %while_end" + to_string(thiscnt) + "\n";
+      }
+      koopa_string += "while_body" + to_string(thiscnt) + ":\n";
+      ifstmt -> Dump(fout, koopa_str);
+      cur_while = thiscnt;
+      koopa_string += "  jump %while_body" + to_string(thiscnt) +"\n";
+      koopa_string += "while_end"  +to_string(thiscnt);
+    }
+    else if(type == 10){
+      koopa_string += "  jump %while_end" + to_string(this_cnt) + "\n";
+    }
+    else if(type == 11){
+      koopa_string += "  jump %while_entry" + to_string(this_cnt) + "\n";
     }
   }
 };
