@@ -19,20 +19,27 @@ static stack<int> cur_num;
 static stack<int> imm_stack;
 static map<std::string, std::string> const_symtbl;
 static map<std::string, std::string> var_symtbl;
+static vector<string> func_var;
+static vector<vector<string> > param_list;
 static vector<map<std::string, std::string> > var_symtbl_b;
 static vector<map<std::string, std::string> > const_symtbl_b;
 static vector<map<std::string, std::string> > saved_var_symtbl_b;
 static vector<map<std::string, std::string> > saved_const_symtbl_b;
+static map<std::string, std::string> func_tbl;
+static map<std::string, int> quick_ret;
+static std::string koopa_string;
+static std::string cur_func;
 static int exp_depth;
 static int block_depth;
+static int func_depth;
 static int max_block_depth;
 static bool optrue = 0;
 static vector<int> terminated;
 static int whilecnt = 0;
-static int cur_while = 0;
+static vector<int> cur_while;
 static int ifcnt = 0;
 static int elsecnt = 0;
-static std::string koopa_string;
+static string tmptype;
 class BaseAST
 {
 public:
@@ -43,51 +50,179 @@ public:
 class CompUnitAST : public BaseAST
 {
 public:
-  std::unique_ptr<BaseAST> func_def;
+  std::unique_ptr<BaseAST> compunit;
 
   void Dump(FILE *fout, char *koopa_str) const override
   {
-    std::cout << "CompUnitAST { ";
-    func_def->Dump(fout, koopa_str);
-    std::cout << " }";
+    cout<<"in compunit"<<endl;
+    koopa_string +=  "decl @getint(): i32\ndecl @getch(): i32\ndecl @getarray(*i32): i32\ndecl @putint(i32)\ndecl @putch(i32)\ndecl @putarray(i32, *i32)\ndecl @starttime()\ndecl @stoptime()\n";
+    func_tbl["getint"] = "int";
+    func_tbl["getch"] = "int";
+    func_tbl["getarray"] = "int";
+    func_tbl["putint"] = "void";
+    func_tbl["putch"] = "void";
+    func_tbl["putarray"] = "void";
+    func_tbl["starttime"] = "void";
+    func_tbl["stoptime"] = "void";
+    quick_ret["getint"] = -114514;
+    quick_ret["getch"] = -114514;
+    quick_ret["getarray"] = -114514;
+    quick_ret["putint"] = -114514;
+    quick_ret["putch"] = -114514;
+    quick_ret["putarray"] = -114514;
+    quick_ret["starttime"] = -114514;
+    quick_ret["stoptime"] = -114514;
+    // global vars table
+    cur_func = "global";
+    var_symtbl_b.push_back(*(new map<std::string, std::string>()));
+    const_symtbl_b.push_back(*(new map<std::string, std::string>()));
+    saved_var_symtbl_b.push_back(*(new map<std::string, std::string>()));
+    saved_const_symtbl_b.push_back(*(new map<std::string, std::string>()));
+    compunit -> Dump(fout, koopa_str);
+    
+    strcpy(koopa_str, koopa_string.c_str());
+  }
+};
+
+class CompUnitBAST : public BaseAST
+{
+public:
+  std::unique_ptr<BaseAST> compunit;
+  std::unique_ptr<BaseAST> func_def;
+  std::unique_ptr<BaseAST> decl;
+  int type;
+
+  void Dump(FILE *fout, char *koopa_str) const override
+  {
+    cout<<"in compunitb"<<endl;
+    if(type == 1){
+      compunit -> Dump(fout, koopa_str);
+      func_def->Dump(fout, koopa_str);
+    }
+    if(type == 2){
+      compunit -> Dump(fout, koopa_str);
+      decl->Dump(fout, koopa_str);
+    }
+    if(type == 3){
+      func_def->Dump(fout, koopa_str);
+    }
+    if(type == 4){
+      decl->Dump(fout, koopa_str);
+    }
+
   }
 };
 
 class FuncDefAST : public BaseAST
 {
 public:
-  std::unique_ptr<BaseAST> func_type;
+  int type;
   std::string ident;
+  std::unique_ptr<BaseAST> func_type;
   std::unique_ptr<BaseAST> block;
+  std::unique_ptr<BaseAST> fparams;
 
   void Dump(FILE *fout, char *koopa_str) const override
   {
-    std::cout << "FuncDefAST { ";
-    koopa_string += "fun @" + ident + "():";
-    func_type->Dump(fout, koopa_str);
-    std::cout << ", " << ident << ", ";
-    block->Dump(fout, koopa_str);
-    koopa_string += "}\n";
-    strcpy(koopa_str, koopa_string.c_str());
-    std::cout << " }";
+    cout<<"in funcdef"<<endl;
+    cur_func = ident;
+    func_var = *new vector<string>();
+    if(type == 1){
+      koopa_string += "fun @" + ident + "()";
+      func_tbl[ident] = "int"; 
+      koopa_string += ": i32 {\n%entry:\n";
+      cout<<2<<endl;
+      block->Dump(fout, koopa_str);
+      if(!terminated.back()){
+        koopa_string += "  ret\n";
+      }
+      koopa_string += "}\n";
+    }
+    if(type == 2){
+      koopa_string += "fun @" + ident + "(";
+      fparams -> Dump(fout, koopa_str);
+      koopa_string += ")";
+      func_tbl[ident] = "int";
+      koopa_string += ": i32 {\n%entry:\n";
+      cout<<2<<endl;
+      block->Dump(fout, koopa_str);
+      if(!terminated.back()){
+        koopa_string += "  ret\n";
+      }
+      koopa_string += "}\n";
+    }
+    if(type == 3){
+      koopa_string += "fun @" + ident + "()";
+      func_tbl[ident] = "void"; 
+      koopa_string += "{\n%entry:\n";
+      cout<<2<<endl;
+      block->Dump(fout, koopa_str);
+      if(!terminated.back()){
+        quick_ret[cur_func] = -114514;
+        koopa_string += "  ret\n";
+      }
+      koopa_string += "}\n";
+    }
+    if(type == 4){
+      koopa_string += "fun @" + ident + "(";
+      fparams -> Dump(fout, koopa_str);
+      koopa_string += ")";
+      func_tbl[ident] = "void";
+      koopa_string += "{\n%entry:\n";
+      cout<<2<<endl;
+      block->Dump(fout, koopa_str);
+      if(!terminated.back()){
+        quick_ret[cur_func] = -114514;
+        koopa_string += "  ret\n";
+      }
+      koopa_string += "}\n";
+    }
   }
 };
 
-class FuncTypeAST : public FuncDefAST
+class FuncFParamsAST : public BaseAST
+{
+public:
+  std::unique_ptr<BaseAST> func_type;
+  std::string ident;
+  std::unique_ptr<BaseAST> fparams;
+  int type;
+
+  void Dump(FILE *fout, char *koopa_str) const override
+  {
+    cout<<"in fparam"<<endl;
+    if(type == 1){
+      koopa_string += "@" + ident;
+      koopa_string += ": i32";
+      koopa_string += ",";
+      func_var.push_back(ident);
+      fparams->Dump(fout, koopa_str);
+    }
+    if(type == 2){
+      koopa_string += "@" + ident;
+      koopa_string += ": i32";
+      func_var.push_back(ident);
+    }
+  }
+};
+
+class FuncTypeAST : public BaseAST
 {
 public:
   std::string functype;
   void Dump(FILE *fout, char *koopa_str) const override
   {
-    terminated.push_back(0);
-    var_symtbl_b.push_back(*(new map<std::string, std::string>()));
-    const_symtbl_b.push_back(*(new map<std::string, std::string>()));
-    saved_var_symtbl_b.push_back(*(new map<std::string, std::string>()));
-    saved_const_symtbl_b.push_back(*(new map<std::string, std::string>()));
-    std::cout << "in functype" << endl;
-    koopa_string += " i32 {\n%entry:\n";
+    //TODO:depth isn't correct
+    std::cout << "in functype1" << endl;
+    tmptype = functype;
+    if(functype == "int")
+      koopa_string += ": i32 {\n%entry:\n";
+    else
+      koopa_string += "{\n%entry:\n";
+    std::cout << functype << endl;
   }
 };
+
 class BlockAST : public BaseAST
 {
 public:
@@ -96,8 +231,50 @@ public:
   void Dump(FILE *fout, char *koopa_str) const override
   {
     if(type == 1){
+      terminated.push_back(0);
+      var_symtbl_b.push_back(*(new map<std::string, std::string>()));
+      const_symtbl_b.push_back(*(new map<std::string, std::string>()));
+      saved_var_symtbl_b.push_back(*(new map<std::string, std::string>()));
+      saved_const_symtbl_b.push_back(*(new map<std::string, std::string>()));
+      block_depth += 1;
+      if(block_depth > max_block_depth){
+        saved_var_symtbl_b.push_back(*(new map<std::string, std::string>()));
+        saved_const_symtbl_b.push_back(*(new map<std::string, std::string>()));
+        max_block_depth = block_depth;
+      }
+      while(!func_var.empty()){
+        cout<<"parse"<<endl;
+        string tmp = func_var.front();
+        func_var.erase(func_var.begin());
+        koopa_string += "  @" + tmp + "_" + to_string(block_depth) + " = alloc i32\n  store @" + tmp + ", @" + tmp + "_" + to_string(block_depth) + "\n";
+        var_symtbl_b[block_depth][tmp] = "%"+tmp;
+      }
       std::cout << "in block" << endl;
       blockitem->Dump(fout, koopa_str);
+      var_symtbl_b.pop_back();
+      const_symtbl_b.pop_back();
+      block_depth -= 1;
+    }
+    else{
+      terminated.push_back(0);
+      var_symtbl_b.push_back(*(new map<std::string, std::string>()));
+      const_symtbl_b.push_back(*(new map<std::string, std::string>()));
+      saved_var_symtbl_b.push_back(*(new map<std::string, std::string>()));
+      saved_const_symtbl_b.push_back(*(new map<std::string, std::string>()));
+      block_depth += 1;
+      if(block_depth > max_block_depth){
+        saved_var_symtbl_b.push_back(*(new map<std::string, std::string>()));
+        saved_const_symtbl_b.push_back(*(new map<std::string, std::string>()));
+        max_block_depth = block_depth;
+      }
+      while(!func_var.empty()){
+        cout<<"parse"<<endl;
+        string tmp = func_var.front();
+        func_var.erase(func_var.begin());
+        koopa_string += "  @" + tmp + "_" + to_string(block_depth) + " = alloc i32\n  store @" + tmp + ", @" + tmp + "_" + to_string(block_depth) + "\n";
+        var_symtbl_b[block_depth][tmp] = "%"+tmp;
+      }
+      std::cout << "in block" << endl;
     }
   }
 };
@@ -132,11 +309,13 @@ public:
         if (ttype == -1)
         {
           std::cout << "no expr";
+          quick_ret[cur_func] = imm_stack.top();
           koopa_string +=  to_string(imm_stack.top()) + "\n";
           imm_stack.pop();
         }
         else
         {
+          quick_ret[cur_func] = -114514;
           std::cout << "expr";
           koopa_string +=  "%" + to_string(ttype) + "\n";
         }
@@ -178,9 +357,7 @@ public:
       exp->Dump(fout, koopa_str);
       int ttype = cur_num.top();
       cur_num.pop();
-      if (ttype == -1)
-      {
-        std::cout << "give no expr";
+      if(ttype == -1){
         imm_stack.pop();
       }
     }
@@ -190,19 +367,7 @@ public:
     }
     else if(type == 6)
     {
-      block_depth += 1;
-      if(block_depth > max_block_depth){
-        saved_var_symtbl_b.push_back(*(new map<std::string, std::string>()));
-        saved_const_symtbl_b.push_back(*(new map<std::string, std::string>()));
-        max_block_depth = block_depth;
-      }
-      var_symtbl_b.push_back(*(new map<std::string, std::string>()));
-      const_symtbl_b.push_back(*(new map<std::string, std::string>()));
-      max_block_depth = block_depth;
       block->Dump(fout, koopa_str);
-      var_symtbl_b.pop_back();
-      const_symtbl_b.pop_back();
-      block_depth -= 1;
     }
     else if(type == 7){
       exp -> Dump(fout, koopa_str);
@@ -256,13 +421,12 @@ public:
     }
     else if(type == 9){
       int thiscnt = whilecnt;
-      cur_while = thiscnt;
-      ifcnt += 1;
+      cur_while.push_back(thiscnt);
+      whilecnt += 1;
       koopa_string += "  jump %while_entry" + to_string(thiscnt) + "\n";
       koopa_string += "%while_entry" + to_string(thiscnt) + ":\n";
       exp -> Dump(fout, koopa_str);
       //refresh cur while loop
-      cur_while = thiscnt;
       int ttype = cur_num.top();
       cur_num.pop();
       if(ttype == -1){
@@ -272,17 +436,23 @@ public:
       else{
         koopa_string += "  br %" + to_string(ttype) + ", %while_body" + to_string(thiscnt) + ", %while_end" + to_string(thiscnt) + "\n";
       }
-      koopa_string += "while_body" + to_string(thiscnt) + ":\n";
+      koopa_string += "%while_body" + to_string(thiscnt) + ":\n";
+      terminated.push_back(0);
       ifstmt -> Dump(fout, koopa_str);
-      cur_while = thiscnt;
-      koopa_string += "  jump %while_body" + to_string(thiscnt) +"\n";
-      koopa_string += "while_end"  +to_string(thiscnt);
+      if(!terminated.back())
+        koopa_string += "  jump %while_entry" + to_string(thiscnt) +"\n";
+      cout<<"t"<<terminated.back()<<endl;
+      terminated.pop_back();
+      koopa_string += "%while_end"  +to_string(thiscnt) + ":\n";
+      cur_while.pop_back();
     }
     else if(type == 10){
-      koopa_string += "  jump %while_end" + to_string(this_cnt) + "\n";
+      koopa_string += "  jump %while_end" + to_string(cur_while.back()) + "\n";
+      terminated.back() = 1;
     }
     else if(type == 11){
-      koopa_string += "  jump %while_entry" + to_string(this_cnt) + "\n";
+      koopa_string += "  jump %while_entry" + to_string(cur_while.back()) + "\n";
+      terminated.back() = 1;
     }
   }
 };
@@ -313,58 +483,66 @@ public:
     }
     if (type != 1)
     {
-      landexp->Dump(fout, koopa_str);
       lorexp->Dump(fout, koopa_str);
-      int ttype;
+      int ttype1;
+      int ttype2;
       string exp1;
       string exp2;
-      ttype = cur_num.top();
+      ttype1 = cur_num.top();
       cur_num.pop();
-      if (ttype == -1)
-      {
-        exp1 = to_string(imm_stack.top());
-        int tmp = imm_stack.top();
-        imm_stack.pop();
-        if(tmp != 0){
-          imm_stack.push(1);
+      if(ttype1 == -1){
+        int tmptop = imm_stack.top();
+        if(tmptop == 1){
+          imm_stack.pop();
           cur_num.push(-1);
+          imm_stack.push(1);
           return;
         }
       }
-      else
-      {
-        exp1 = "%" + to_string(ttype);
-      }
-      ttype = cur_num.top();
+      landexp->Dump(fout, koopa_str);
+      ttype2 = cur_num.top();
       cur_num.pop();
-      if (ttype == -1)
-      {
-        exp2 = to_string(imm_stack.top());
-        int tmp = imm_stack.top();
+      if(ttype1 == -1 && ttype2 == -1){
+        int var1 = imm_stack.top();
         imm_stack.pop();
-        if(tmp != 0){
-          imm_stack.push(1);
-          cur_num.push(-1);
-          return;
+        int var2 = imm_stack.top();
+        imm_stack.pop();
+        cur_num.push(-1);
+        imm_stack.push(var1||var2);
+      }
+      else{
+        if (ttype1 == -1)
+        {
+          exp1 = to_string(imm_stack.top());
+          imm_stack.pop();
         }
+        else
+        {
+          exp1 = "%" + to_string(ttype1);
+        }
+        if (ttype2 == -1)
+        {
+          exp2 = to_string(imm_stack.top());
+          imm_stack.pop();
+        }
+        else
+        {
+          exp2 = "%" +  to_string(ttype2);
+        }
+        string myexp1;
+        myexp1 = "%" + to_string(exp_depth);
+        exp_depth += 1;
+        string myexp2;
+        myexp2 = "%" + to_string(exp_depth);
+        exp_depth += 1;
+        string myexp3;
+        myexp3 = "%" + to_string(exp_depth);
+        exp_depth += 1;
+        koopa_string += "  " + myexp1 + " = ne 0, " + exp1 + "\n";
+        koopa_string += "  " + myexp2 + " = ne 0, " + exp2 + "\n";
+        koopa_string += "  " + myexp3 + " = or " + myexp1 + ", " + myexp2 + "\n";
+        cur_num.push(exp_depth - 1);
       }
-      else
-      {
-        exp2 = "%" +  to_string(ttype);
-      }
-      string myexp1;
-      myexp1 = "%" + to_string(exp_depth);
-      exp_depth += 1;
-      string myexp2;
-      myexp2 = "%" + to_string(exp_depth);
-      exp_depth += 1;
-      string myexp3;
-      myexp3 = "%" + to_string(exp_depth);
-      exp_depth += 1;
-      koopa_string += "  " + myexp1 + " = ne 0, " + exp1 + "\n";
-      koopa_string += "  " + myexp2 + " = ne 0, " + exp2 + "\n";
-      koopa_string += "  " + myexp3 + " = or " + myexp1 + ", " + myexp2 + "\n";
-      cur_num.push(exp_depth - 1);
     }
   }
 };
@@ -373,7 +551,6 @@ class LAndExpAST : public BaseAST
 {
 public:
   int type;
-
   std::unique_ptr<BaseAST> eqexp;
   std::unique_ptr<BaseAST> landexp;
   void Dump(FILE *fout, char *koopa_str) const override
@@ -385,59 +562,67 @@ public:
     }
     if (type != 1)
     {
-      eqexp->Dump(fout, koopa_str);
       landexp->Dump(fout, koopa_str);
-      int ttype;
+      int ttype1;
+      int ttype2;
       string exp1;
       string exp2;
-      ttype = cur_num.top();
+      ttype1 = cur_num.top();
       cur_num.pop();
-      if (ttype == -1)
-      {
-        int tmp = imm_stack.top();
-        exp1 = to_string(imm_stack.top());
-        imm_stack.pop();
-        if(tmp == 0){
-          imm_stack.push(0);
+      if(ttype1 == -1){
+        int tmptop = imm_stack.top();
+        if(tmptop == 0){
+          imm_stack.pop();
           cur_num.push(-1);
+          imm_stack.push(0);
           return;
         }
       }
-      else
-      {
-        exp1 = "%" + to_string(ttype);
-      }
-      ttype = cur_num.top();
+      eqexp->Dump(fout, koopa_str);
+      ttype2 = cur_num.top();
       cur_num.pop();
-      if (ttype == -1)
-      {
-        exp2 = to_string(imm_stack.top());
-        int tmp = imm_stack.top();
+      if(ttype1 == -1 && ttype2 == -1){
+        int var1 = imm_stack.top();
         imm_stack.pop();
-        if(tmp == 0){
-          imm_stack.push(0);
-          cur_num.push(-1);
-          return;
+        int var2 = imm_stack.top();
+        imm_stack.pop();
+        cur_num.push(-1);
+        imm_stack.push(var1&&var2);
+      }
+      else{
+        if (ttype1 == -1)
+        {
+          exp1 = to_string(imm_stack.top());
+          imm_stack.pop();
         }
+        else
+        {
+          exp1 = "%" + to_string(ttype1);
+        }
+        if (ttype2 == -1)
+        {
+          exp2 = to_string(imm_stack.top());
+          imm_stack.pop();
+        }
+        else
+        {
+          exp2 = "%" + to_string(ttype2);
+        }
+        
+        string myexp1;
+        myexp1 = "%" + to_string(exp_depth);
+        exp_depth += 1;
+        string myexp2;
+        myexp2 = "%" + to_string(exp_depth);
+        exp_depth += 1;
+        string myexp3;
+        myexp3 = "%" + to_string(exp_depth);
+        exp_depth += 1;
+        koopa_string += "  " + myexp1 + " = ne 0, " + exp1 + "\n";
+        koopa_string += "  " + myexp2 + " = ne 0, " + exp2 + "\n";
+        koopa_string += "  " + myexp3 + " = and " + myexp1 + ", " + myexp2 + "\n";
+        cur_num.push(exp_depth - 1);
       }
-      else
-      {
-        exp2 = "%" + to_string(ttype);
-      }
-      
-      string myexp1;
-      myexp1 = "%" + to_string(exp_depth);
-      exp_depth += 1;
-      string myexp2;
-      myexp2 = "%" + to_string(exp_depth);
-      exp_depth += 1;
-      string myexp3;
-      myexp3 = "%" + to_string(exp_depth);
-      exp_depth += 1;
-      koopa_string += "  " + myexp1 + " = ne 0, " + exp1 + "\n";
-      koopa_string += "  " + myexp2 + " = ne 0, " + exp2 + "\n";
-      koopa_string += "  " + myexp3 + " = and " + myexp1 + ", " + myexp2 + "\n";
-      cur_num.push(exp_depth - 1);
     }
   }
 };
@@ -581,46 +766,65 @@ public:
     }
     if (type != 1)
     {
-      mulexp->Dump(fout, koopa_str);
       addexp->Dump(fout, koopa_str);
-      int ttype;
+      mulexp->Dump(fout, koopa_str);
+      int ttype1;
+      int ttype2;
       string exp1;
       string exp2;
-      ttype = cur_num.top();
+      ttype2 = cur_num.top();
       cur_num.pop();
-      if (ttype == -1)
-      {
-        exp1 = to_string(imm_stack.top());
-        imm_stack.pop();
-      }
-      else
-      {
-        exp1 = "%" + to_string(ttype);
-      }
-      ttype = cur_num.top();
+      ttype1 = cur_num.top();
       cur_num.pop();
-      if (ttype == -1)
-      {
-        exp2 = to_string(imm_stack.top());
+      // all numbers, calculate
+      if (ttype1 == -1 && ttype2 == -1){
+        int result;
+        int var2 = imm_stack.top();
         imm_stack.pop();
+        int var1 = imm_stack.top();
+        imm_stack.pop();
+        if(type == 2){
+          result = var1 + var2;
+        }
+        if(type == 3){
+          result = var1 - var2;
+        }
+        cur_num.push(-1);
+        imm_stack.push(result);
       }
-      else
-      {
-        exp2 = "%" + to_string(ttype);
+      else{
+        if (ttype1 == -1)
+        {
+          exp1 = to_string(imm_stack.top());
+          imm_stack.pop();
+        }
+        else
+        {
+          exp1 = "%" + to_string(ttype1);
+        }
+        if (ttype2 == -1)
+        {
+          exp2 = to_string(imm_stack.top());
+          imm_stack.pop();
+        }
+        else
+        {
+          exp2 = "%" + to_string(ttype2);
+        }
+        string myexp;
+        myexp = "%" + to_string(exp_depth);
+        exp_depth += 1;
+        if (type == 2)
+        {
+          koopa_string += "  " + myexp + " = add " + exp1 + ", " + exp2 + "\n";
+        }
+        if (type == 3)
+        {
+          koopa_string += "  " + myexp + " = sub " + exp1 + ", " + exp2 + "\n";
+        }
+        cur_num.push(exp_depth - 1);
+        std::cout << "finish add without problem" << endl;
       }
-      string myexp;
-      myexp = "%" + to_string(exp_depth);
-      exp_depth += 1;
-      if (type == 2)
-      {
-        koopa_string += "  " + myexp + " = add " + exp1 + ", " + exp2 + "\n";
-      }
-      if (type == 3)
-      {
-        koopa_string += "  " + myexp + " = sub " + exp1 + ", " + exp2 + "\n";
-      }
-      cur_num.push(exp_depth - 1);
-      std::cout << "finish add without problem" << endl;
     }
   }
 };
@@ -642,47 +846,68 @@ public:
     {
       unaryexp->Dump(fout, koopa_str);
       mulexp->Dump(fout, koopa_str);
-      int ttype;
+      int ttype1;
+      int ttype2;
       string exp1;
       string exp2;
-      ttype = cur_num.top();
+      ttype1 = cur_num.top();
       cur_num.pop();
-      if (ttype == -1)
-      {
-        exp1 = to_string(imm_stack.top());
-        imm_stack.pop();
-      }
-      else
-      {
-        exp1 = "%" + to_string(ttype);
-      }
-      ttype = cur_num.top();
+      ttype2 = cur_num.top();
       cur_num.pop();
-      if (ttype == -1)
-      {
-        exp2 = to_string(imm_stack.top());
+      if (ttype1 == -1 && ttype2 == -1){
+        int result;
+        int var1 = imm_stack.top();
         imm_stack.pop();
+        int var2 = imm_stack.top();
+        imm_stack.pop();
+        if(type == 2){
+          result = var1 * var2;
+        }
+        if(type == 3){
+          result = var1 / var2;
+        }
+        if(type == 4){
+          result = var1 % var2;
+        }
+        cur_num.push(-1);
+        imm_stack.push(result);
       }
-      else
-      {
-        exp2 = "%" + to_string(ttype);
+      else{
+        if (ttype1 == -1)
+        {
+          exp1 = to_string(imm_stack.top());
+          imm_stack.pop();
+        }
+        else
+        {
+          exp1 = "%" + to_string(ttype1);
+        }
+        if (ttype2 == -1)
+        {
+          exp2 = to_string(imm_stack.top());
+          imm_stack.pop();
+        }
+        else
+        {
+          exp2 = "%" + to_string(ttype2);
+        }
+        string myexp;
+        myexp = "%" + to_string(exp_depth);
+        exp_depth += 1;
+        if (type == 2)
+        {
+          koopa_string += "  " + myexp + " = mul " + exp1 + ", " + exp2 + "\n";
+        }
+        if (type == 3)
+        {
+          koopa_string += "  " + myexp + " = div " + exp1 + ", " + exp2 + "\n";
+        }
+        if (type == 4)
+        {
+          koopa_string += "  " + myexp + " = mod " + exp1 + ", " + exp2 + "\n";
+        }
+        cur_num.push(exp_depth - 1);
       }
-      string myexp;
-      myexp = "%" + to_string(exp_depth);
-      exp_depth += 1;
-      if (type == 2)
-      {
-        koopa_string += "  " + myexp + " = mul " + exp1 + ", " + exp2 + "\n";
-      }
-      if (type == 3)
-      {
-        koopa_string += "  " + myexp + " = div " + exp1 + ", " + exp2 + "\n";
-      }
-      if (type == 4)
-      {
-        koopa_string += "  " + myexp + " = mod " + exp1 + ", " + exp2 + "\n";
-      }
-      cur_num.push(exp_depth - 1);
     }
   }
 };
@@ -693,15 +918,19 @@ public:
   int type;
   std::unique_ptr<BaseAST> primaryexp;
   std::unique_ptr<BaseAST> unaryexp;
+  std::unique_ptr<BaseAST> rparams;
+  std::string ident;
   void Dump(FILE *fout, char *koopa_str) const override
   {
     std::cout << "in unary" << endl;
     if (type == 1)
     {
+      std::cout << "in unary1" << endl;
       primaryexp->Dump(fout, koopa_str);
     }
-    if (type != 1)
+    if (type != 1 && type != 5 && type != 6)
     {
+      std::cout << "in unary234" << endl;
       unaryexp->Dump(fout, koopa_str);
       if (type != 2)
       {
@@ -710,26 +939,115 @@ public:
         string exp1;
         if (ttype == -1)
         {
-          exp1 = to_string(imm_stack.top());
+          int var = imm_stack.top();
           imm_stack.pop();
+          cur_num.push(-1);
+          if(type == 3){
+            imm_stack.push(-var);
+          }
+          if(type == 4){
+            imm_stack.push(!var);
+          }
         }
         else
         {
           exp1 = "%" + to_string(ttype);
+        
+          string myexp;
+          myexp = "%" + to_string(exp_depth);
+          exp_depth += 1;
+          if (type == 3)
+          {
+            koopa_string += "  " + myexp + " = sub 0, " + exp1 + "\n";
+          }
+          if (type == 4)
+          {
+            koopa_string += "  " + myexp + " = eq 0, " + exp1 + "\n";
+          }
+          cur_num.push(exp_depth - 1);
         }
-        string myexp;
-        myexp = "%" + to_string(exp_depth);
-        exp_depth += 1;
-        if (type == 3)
-        {
-          koopa_string += "  " + myexp + " = sub 0, " + exp1 + "\n";
-        }
-        if (type == 4)
-        {
-          koopa_string += "  " + myexp + " = eq 0, " + exp1 + "\n";
-        }
-        cur_num.push(exp_depth - 1);
       }
+    }
+    if(type == 5){
+      std::cout << "in unary5" << endl;
+      if(quick_ret[ident] != -114514){
+        cur_num.push(-1);
+        imm_stack.push(quick_ret[ident]);
+        koopa_string += "  call @" + ident + "()\n";
+      } 
+      else{
+        if(func_tbl[ident] == "int"){
+          koopa_string += "  %" + to_string(exp_depth) + " = call @" + ident + "()\n";
+          cur_num.push(exp_depth);
+          exp_depth += 1;
+        }
+        else{
+          // not defined
+          koopa_string += "  call @" + ident + "()\n";
+          cur_num.push(-1);
+          imm_stack.push(1);
+        }
+      }
+    }
+    if(type == 6){
+      std::cout << "in unary6" << endl;
+      param_list.push_back(*new vector<string>());
+      rparams -> Dump(fout, koopa_str);
+      if(quick_ret[ident] != -114514){
+        cur_num.push(-1);
+        imm_stack.push(quick_ret[ident]);
+        koopa_string += "  call @" + ident + "()\n";
+      } 
+      else{
+        if(func_tbl[ident] == "int"){
+          koopa_string += "  %" + to_string(exp_depth) + " = call @" + ident + "(";
+          cur_num.push(exp_depth);
+          exp_depth += 1;
+        }
+        else{
+          koopa_string += "  call @" + ident + "(";
+          cur_num.push(-1);
+          imm_stack.push(1);
+        }
+        while(!param_list.back().empty()){
+          cout<<"parsing param list"<<endl;
+          if(param_list.back().size() == 1){
+            koopa_string += param_list.back().front();
+          }
+          else{
+            koopa_string += param_list.back().front() + ", ";
+          }
+          param_list.back().erase(param_list.back().begin());
+        }
+        koopa_string += ")\n";
+        param_list.pop_back();
+      }
+    }
+  }
+};
+
+class FuncRParamsAST : public BaseAST
+{
+public:
+  std::unique_ptr<BaseAST> exp;
+  std::unique_ptr<BaseAST> rparams;
+  int type;
+
+  void Dump(FILE *fout, char *koopa_str) const override
+  {
+    std::cout << "in rparam" << endl;
+    exp->Dump(fout, koopa_str);
+    int ttype = cur_num.top();
+    cur_num.pop();
+    if(ttype == -1){
+      param_list.back().push_back(to_string(imm_stack.top()));
+      imm_stack.pop();
+    }
+    else{
+      param_list.back().push_back("%" + to_string(ttype));
+    }
+    if(type == 1){
+      rparams -> Dump(fout, koopa_str);
     }
   }
 };
@@ -976,9 +1294,12 @@ public:
     std::cout << "in var def" << endl;
     if (type == 1)
     {
-      vardef->Dump(fout, koopa_str);
+        vardef->Dump(fout, koopa_str);
       if(saved_var_symtbl_b[block_depth].find(lval) == saved_var_symtbl_b[block_depth].end()){
-        koopa_string += "  @" + lval + "_" + to_string(block_depth) + " = alloc i32\n";
+        if(block_depth != 0)
+          koopa_string += "  @" + lval + "_" + to_string(block_depth) + " = alloc i32\n";
+        else
+          koopa_string += "global @" + lval + "_" + to_string(block_depth) + " = alloc i32, zeroinit\n";
         var_symtbl_b[block_depth][lval] = "";
         saved_var_symtbl_b[block_depth][lval] = "";
       }
@@ -990,7 +1311,7 @@ public:
     {
       vardef->Dump(fout, koopa_str);
       initval->Dump(fout, koopa_str);
-      if(saved_var_symtbl_b[block_depth].find(lval) == saved_var_symtbl_b[block_depth].end()){
+      if(saved_var_symtbl_b[block_depth].find(lval) == saved_var_symtbl_b[block_depth].end() && block_depth != 0){
         koopa_string += "  @" + lval + "_" + to_string(block_depth) + " = alloc i32\n";
       }
       int ttype = cur_num.top();
@@ -1003,7 +1324,10 @@ public:
 
         var_symtbl_b[block_depth][lval] = to_string(tmp);
         saved_var_symtbl_b[block_depth][lval] = to_string(tmp);
-        koopa_string += "  store " + var_symtbl_b[block_depth][lval] + " ,@" + lval + "_" + to_string(block_depth) + "\n";
+        if(block_depth != 0)
+          koopa_string += "  store " + var_symtbl_b[block_depth][lval] + " ,@" + lval + "_" + to_string(block_depth) + "\n";
+        else 
+          koopa_string += "global @" + lval + "_" + to_string(block_depth) + " = alloc i32, " + to_string(tmp) + "\n";
       }
       else
       {
@@ -1015,7 +1339,10 @@ public:
     if (type == 3)
     {
       if(saved_var_symtbl_b[block_depth].find(lval) == saved_var_symtbl_b[block_depth].end()){
-        koopa_string += "  @" + lval + "_" + to_string(block_depth) + " = alloc i32\n";
+        if(block_depth != 0)
+          koopa_string += "  @" + lval + "_" + to_string(block_depth) + " = alloc i32\n";
+        else
+          koopa_string += "global @" + lval + "_" + to_string(block_depth) + " = alloc i32, zeroinit\n";
         var_symtbl_b[block_depth][lval] = "";
         saved_var_symtbl_b[block_depth][lval] = "";
       }
@@ -1023,7 +1350,7 @@ public:
     if (type == 4)
     {
       initval->Dump(fout, koopa_str);
-      if(saved_var_symtbl_b[block_depth].find(lval) == saved_var_symtbl_b[block_depth].end()){
+      if(saved_var_symtbl_b[block_depth].find(lval) == saved_var_symtbl_b[block_depth].end() && block_depth != 0){
         koopa_string += "  @" + lval + "_" + to_string(block_depth) + " = alloc i32\n";
       }
       int ttype = cur_num.top();
@@ -1039,9 +1366,10 @@ public:
         saved_var_symtbl_b[block_depth][lval] = to_string(tmp);
         std::cout << var_symtbl_b[block_depth][lval] << endl;
         std::cout << "fine in type442" << endl;
-        
-        koopa_string += "  store " + var_symtbl_b[block_depth][lval] + " ,@" + lval + "_" + to_string(block_depth) + "\n";
-        std::cout << "going out" << endl;
+        if(block_depth != 0)
+          koopa_string += "  store " + var_symtbl_b[block_depth][lval] + " ,@" + lval + "_" + to_string(block_depth) + "\n";
+        else 
+          koopa_string += "global @" + lval + "_" + to_string(block_depth) + " = alloc i32, " + to_string(tmp) + "\n";
       }
       else
       {

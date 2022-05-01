@@ -1,18 +1,274 @@
 -riscv
-CompUnitAST { FuncDefAST { in functype
-, main, in block
+1
+in compunit
+in compunitb
+in compunitb
+in compunitb
+in funcdef
+in fparam
+in fparam
+in fparam
+in fparam
+in fparam
+in fparam
+in fparam
+in fparam
+2
+parse
+parse
+parse
+parse
+parse
+parse
+parse
+parse
+in block
+in blockitem
+    type4
+in stmt
+StmtAST { in exp
+in lorexp
+in landexp
+in eqexp
+in rel exp
+in add
+in add
+in add
+in add
+in add
+in add
+in add
+in add
+in mul
+in unary
+in unary1
+in primaryexp
+in primaryexp and going to parse lval
+no target in const symbol
+in mul
+in unary
+in unary1
+in primaryexp
+in primaryexp and going to parse lval
+no target in const symbol
+finish add without problem
+in mul
+in unary
+in unary1
+in primaryexp
+in primaryexp and going to parse lval
+no target in const symbol
+finish add without problem
+in mul
+in unary
+in unary1
+in primaryexp
+in primaryexp and going to parse lval
+no target in const symbol
+finish add without problem
+in mul
+in unary
+in unary1
+in primaryexp
+in primaryexp and going to parse lval
+no target in const symbol
+finish add without problem
+in mul
+in unary
+in unary1
+in primaryexp
+in primaryexp and going to parse lval
+no target in const symbol
+finish add without problem
+in mul
+in unary
+in unary1
+in primaryexp
+in primaryexp and going to parse lval
+no target in const symbol
+finish add without problem
+in mul
+in unary
+in unary1
+in primaryexp
+in primaryexp and going to parse lval
+no target in const symbol
+finish add without problem
+exprin funcdef
+in fparam
+in fparam
+in fparam
+in fparam
+in fparam
+in fparam
+in fparam
+in fparam
+in fparam
+in fparam
+in fparam
+in fparam
+in fparam
+in fparam
+in fparam
+in fparam
+2
+parse
+parse
+parse
+parse
+parse
+parse
+parse
+parse
+parse
+parse
+parse
+parse
+parse
+parse
+parse
+parse
+in block
+in blockitem
+    type4
+in stmt
+StmtAST { in exp
+in lorexp
+in landexp
+in eqexp
+in rel exp
+in add
+in add
+in add
+in add
+in add
+in add
+in add
+in add
+in add
+in add
+in add
+in add
+in add
+in add
+in add
+in add
+in mul
+in unary
+in unary1
+in primaryexp
+in primaryexp and going to parse lval
+no target in const symbol
+in mul
+in unary
+in unary1
+in primaryexp
+in primaryexp and going to parse lval
+no target in const symbol
+finish add without problem
+in mul
+in unary
+in unary1
+in primaryexp
+in primaryexp and going to parse lval
+no target in const symbol
+finish add without problem
+in mul
+in unary
+in unary1
+in primaryexp
+in primaryexp and going to parse lval
+no target in const symbol
+finish add without problem
+in mul
+in unary
+in unary1
+in primaryexp
+in primaryexp and going to parse lval
+no target in const symbol
+finish add without problem
+in mul
+in unary
+in unary1
+in primaryexp
+in primaryexp and going to parse lval
+no target in const symbol
+finish add without problem
+in mul
+in unary
+in unary1
+in primaryexp
+in primaryexp and going to parse lval
+no target in const symbol
+finish add without problem
+in mul
+in unary
+in unary1
+in primaryexp
+in primaryexp and going to parse lval
+no target in const symbol
+finish add without problem
+in mul
+in unary
+in unary1
+in primaryexp
+in primaryexp and going to parse lval
+no target in const symbol
+finish add without problem
+in mul
+in unary
+in unary1
+in primaryexp
+in primaryexp and going to parse lval
+no target in const symbol
+finish add without problem
+in mul
+in unary
+in unary1
+in primaryexp
+in primaryexp and going to parse lval
+no target in const symbol
+finish add without problem
+in mul
+in unary
+in unary1
+in primaryexp
+in primaryexp and going to parse lval
+no target in const symbol
+finish add without problem
+in mul
+in unary
+in unary1
+in primaryexp
+in primaryexp and going to parse lval
+no target in const symbol
+finish add without problem
+in mul
+in unary
+in unary1
+in primaryexp
+in primaryexp and going to parse lval
+no target in const symbol
+finish add without problem
+in mul
+in unary
+in unary1
+in primaryexp
+in primaryexp and going to parse lval
+no target in const symbol
+finish add without problem
+in mul
+in unary
+in unary1
+in primaryexp
+in primaryexp and going to parse lval
+no target in const symbol
+finish add without problem
+exprin funcdef
+2
+in block
 in blockitem
     type1
-in blockitem
-    type1
-in blockitem
-    type2
-in blockitem
-    type2
-in blockitem
-    type1
-in blockitem
-    type2
 in blockitem
     type2
 in blockitem
@@ -20,11 +276,7 @@ in blockitem
 in decl
 in var decl
 in var def
-in decl
-in const decl
-in const def
-in const init val
-in const exp
+in init val
 in exp
 in lorexp
 in landexp
@@ -33,14 +285,137 @@ in rel exp
 in add
 in mul
 in unary
-in primaryexp
-in number
-11in add
+in unary6
+in rparam
+in exp
+in lorexp
+in landexp
+in eqexp
+in rel exp
+in add
 in mul
 in unary
+in unary1
 in primaryexp
 in number
-10finish add without problem
+in number1
+in number2
+1in number3
+in rparam
+in exp
+in lorexp
+in landexp
+in eqexp
+in rel exp
+in add
+in mul
+in unary
+in unary1
+in primaryexp
+in number
+in number1
+in number2
+2in number3
+in rparam
+in exp
+in lorexp
+in landexp
+in eqexp
+in rel exp
+in add
+in mul
+in unary
+in unary1
+in primaryexp
+in number
+in number1
+in number2
+3in number3
+in rparam
+in exp
+in lorexp
+in landexp
+in eqexp
+in rel exp
+in add
+in mul
+in unary
+in unary1
+in primaryexp
+in number
+in number1
+in number2
+4in number3
+in rparam
+in exp
+in lorexp
+in landexp
+in eqexp
+in rel exp
+in add
+in mul
+in unary
+in unary1
+in primaryexp
+in number
+in number1
+in number2
+5in number3
+in rparam
+in exp
+in lorexp
+in landexp
+in eqexp
+in rel exp
+in add
+in mul
+in unary
+in unary1
+in primaryexp
+in number
+in number1
+in number2
+6in number3
+in rparam
+in exp
+in lorexp
+in landexp
+in eqexp
+in rel exp
+in add
+in mul
+in unary
+in unary1
+in primaryexp
+in number
+in number1
+in number2
+7in number3
+in rparam
+in exp
+in lorexp
+in landexp
+in eqexp
+in rel exp
+in add
+in mul
+in unary
+in unary1
+in primaryexp
+in number
+in number1
+in number2
+8in number3
+parsing param list
+parsing param list
+parsing param list
+parsing param list
+parsing param list
+parsing param list
+parsing param list
+parsing param list
+fine in type4
+fine in type4
 in decl
 in var decl
 in var def
@@ -53,385 +428,1672 @@ in rel exp
 in add
 in mul
 in unary
+in unary6
+in rparam
+in exp
+in lorexp
+in landexp
+in eqexp
+in rel exp
+in add
+in mul
+in unary
+in unary1
 in primaryexp
-in primaryexp and going to parse lval
-after this, target become:%0
-fine in type2
+in number
+in number1
+in number2
+1in number3
+in rparam
+in exp
+in lorexp
+in landexp
+in eqexp
+in rel exp
+in add
+in mul
+in unary
+in unary1
+in primaryexp
+in number
+in number1
+in number2
+2in number3
+in rparam
+in exp
+in lorexp
+in landexp
+in eqexp
+in rel exp
+in add
+in mul
+in unary
+in unary1
+in primaryexp
+in number
+in number1
+in number2
+3in number3
+in rparam
+in exp
+in lorexp
+in landexp
+in eqexp
+in rel exp
+in add
+in mul
+in unary
+in unary1
+in primaryexp
+in number
+in number1
+in number2
+4in number3
+in rparam
+in exp
+in lorexp
+in landexp
+in eqexp
+in rel exp
+in add
+in mul
+in unary
+in unary1
+in primaryexp
+in number
+in number1
+in number2
+5in number3
+in rparam
+in exp
+in lorexp
+in landexp
+in eqexp
+in rel exp
+in add
+in mul
+in unary
+in unary1
+in primaryexp
+in number
+in number1
+in number2
+6in number3
+in rparam
+in exp
+in lorexp
+in landexp
+in eqexp
+in rel exp
+in add
+in mul
+in unary
+in unary1
+in primaryexp
+in number
+in number1
+in number2
+7in number3
+in rparam
+in exp
+in lorexp
+in landexp
+in eqexp
+in rel exp
+in add
+in mul
+in unary
+in unary1
+in primaryexp
+in number
+in number1
+in number2
+8in number3
+in rparam
+in exp
+in lorexp
+in landexp
+in eqexp
+in rel exp
+in add
+in mul
+in unary
+in unary1
+in primaryexp
+in number
+in number1
+in number2
+9in number3
+in rparam
+in exp
+in lorexp
+in landexp
+in eqexp
+in rel exp
+in add
+in mul
+in unary
+in unary1
+in primaryexp
+in number
+in number1
+in number2
+10in number3
+in rparam
+in exp
+in lorexp
+in landexp
+in eqexp
+in rel exp
+in add
+in mul
+in unary
+in unary1
+in primaryexp
+in number
+in number1
+in number2
+11in number3
+in rparam
+in exp
+in lorexp
+in landexp
+in eqexp
+in rel exp
+in add
+in mul
+in unary
+in unary1
+in primaryexp
+in number
+in number1
+in number2
+12in number3
+in rparam
+in exp
+in lorexp
+in landexp
+in eqexp
+in rel exp
+in add
+in mul
+in unary
+in unary1
+in primaryexp
+in number
+in number1
+in number2
+13in number3
+in rparam
+in exp
+in lorexp
+in landexp
+in eqexp
+in rel exp
+in add
+in mul
+in unary
+in unary1
+in primaryexp
+in number
+in number1
+in number2
+14in number3
+in rparam
+in exp
+in lorexp
+in landexp
+in eqexp
+in rel exp
+in add
+in mul
+in unary
+in unary1
+in primaryexp
+in number
+in number1
+in number2
+15in number3
+in rparam
+in exp
+in lorexp
+in landexp
+in eqexp
+in rel exp
+in add
+in mul
+in unary
+in unary1
+in primaryexp
+in number
+in number1
+in number2
+16in number3
+parsing param list
+parsing param list
+parsing param list
+parsing param list
+parsing param list
+parsing param list
+parsing param list
+parsing param list
+parsing param list
+parsing param list
+parsing param list
+parsing param list
+parsing param list
+parsing param list
+parsing param list
+parsing param list
+fine in type4
+fine in type4
 in stmt
-in exp
-in lorexp
-in landexp
-in eqexp
-in rel exp
-in add
-in mul
-in unary
-in primaryexp
-in number
-1in add
-in mul
-in unary
-in primaryexp
-in primaryexp and going to parse lval
-no target in const symbol
-finish add without problem
-give exprin decl
-in const decl
-in const def
-in const init val
-in const exp
-in exp
-in lorexp
-in landexp
-in eqexp
-in rel exp
-in add
-in mul
-in unary
-in primaryexp
-in number
-7in mul
-in unary
-in primaryexp
-in primaryexp and going to parse lval
-after this, target become:%0
-in decl
-in var decl
-in var def
-in var def
-in init val
-in exp
-in lorexp
-in landexp
-in eqexp
-in rel exp
-in add
-in mul
-in unary
-in primaryexp
-in primaryexp and going to parse lval
-no target in const symbol
-in add
-in mul
-in unary
-in primaryexp
-in primaryexp and going to parse lval
-after this, target become:%3
-finish add without problem
-fine in type2
-in init val
-in exp
-in lorexp
-in landexp
-in eqexp
-in rel exp
-in add
-in mul
-in unary
-in primaryexp
-in primaryexp and going to parse lval
-no target in const symbol
-in add
-in mul
-in unary
-in primaryexp
-in primaryexp and going to parse lval
-after this, target become:%3
-finish add without problem
-fine in type2
-in stmt
-in exp
-in lorexp
-in landexp
-in eqexp
-in rel exp
-in add
-in mul
-in unary
-in primaryexp
-in number
-1in mul
-in unary
-in primaryexp
-in number
-1in mul
-in unary
-in primaryexp
-in number
-1in mul
-in unary
-in primaryexp
-in primaryexp and going to parse lval
-no target in const symbol
-give exprin stmt
 StmtAST { in exp
 in lorexp
 in landexp
 in eqexp
 in rel exp
 in add
-in mul
-in unary
-in primaryexp
-in primaryexp and going to parse lval
-no target in const symbol
 in add
 in mul
 in unary
+in unary1
+in primaryexp
+in primaryexp and going to parse lval
+no target in const symbol
+in mul
+in unary
+in unary1
 in primaryexp
 in primaryexp and going to parse lval
 no target in const symbol
 finish add without problem
-expr } } }
+expr2
+
 in program
 usable regs:0 1 2 3 4 5 6 
 usable regs:0 1 2 3 4 5 6 
 in slice func
 in func
+func begin, check info
+in slice func
+in func
+func begin, check info
+in slice func
+in func
+func begin, check info
+in slice func
+in func
+func begin, check info
+in slice func
+in func
+func begin, check info
+in slice func
+in func
+func begin, check info
+in slice func
+in func
+func begin, check info
+in slice func
+in func
+func begin, check info
+in slice func
+in func
+func begin, check info
+usable regs:0 1 2 3 4 5 6 
+in slice value
+in value
+value name : @a0
+in value nostore
+this name is @a0
+in argref
+number of params is 0
+in slice value
+in value
+value name : @a1
+in value nostore
+this name is @a1
+in argref
+number of params is 1
+in slice value
+in value
+value name : @a2
+in value nostore
+this name is @a2
+in argref
+number of params is 2
+in slice value
+in value
+value name : @a3
+in value nostore
+this name is @a3
+in argref
+number of params is 3
+in slice value
+in value
+value name : @a4
+in value nostore
+this name is @a4
+in argref
+number of params is 4
+in slice value
+in value
+value name : @a5
+in value nostore
+this name is @a5
+in argref
+number of params is 5
+in slice value
+in value
+value name : @a6
+in value nostore
+this name is @a6
+in argref
+number of params is 6
+in slice value
+in value
+value name : @a7
+in value nostore
+this name is @a7
+in argref
+number of params is 7
 usable regs:0 1 2 3 4 5 6 
 in slice block
 in block
-in visit block, instlen:25 paramslen:0
+in visit block, instlen:32 paramslen:0
 usable regs:0 1 2 3 4 5 6 
 in slice value
-value name : @x
-usable regs:0 1 2 3 4 5 6 
+in value
+value name : @a0_1
 in value nostore
 in visit alloc
 in slice value
+in value
 no name
-usable regs:0 1 2 3 4 5 6 
+in value nostore
+in visit store
+in value
+value name : @a0
+in value in stored varible
+in slice value
+in value
+value name : @a1_1
+in value nostore
+in visit alloc
+in slice value
+in value
+no name
+in value nostore
+in visit store
+in value
+value name : @a1
+in value in stored varible
+in slice value
+in value
+value name : @a2_1
+in value nostore
+in visit alloc
+in slice value
+in value
+no name
+in value nostore
+in visit store
+in value
+value name : @a2
+in value in stored varible
+in slice value
+in value
+value name : @a3_1
+in value nostore
+in visit alloc
+in slice value
+in value
+no name
+in value nostore
+in visit store
+in value
+value name : @a3
+in value in stored varible
+in slice value
+in value
+value name : @a4_1
+in value nostore
+in visit alloc
+in slice value
+in value
+no name
+in value nostore
+in visit store
+in value
+value name : @a4
+in value in stored varible
+in slice value
+in value
+value name : @a5_1
+in value nostore
+in visit alloc
+in slice value
+in value
+no name
+in value nostore
+in visit store
+in value
+value name : @a5
+in value in stored varible
+in slice value
+in value
+value name : @a6_1
+in value nostore
+in visit alloc
+in slice value
+in value
+no name
+in value nostore
+in visit store
+in value
+value name : @a6
+in value in stored varible
+in slice value
+in value
+value name : @a7_1
+in value nostore
+in visit alloc
+in slice value
+in value
+no name
+in value nostore
+in visit store
+in value
+value name : @a7
+in value in stored varible
+in slice value
+in value
+no name
+in value nostore
+in visit load
+in load
+0x1f5cf00
+load name:@a0_1
+in slice value
+in value
+no name
+in value nostore
+in visit load
+in load
+0x1f4dc40
+load name:@a1_1
+in slice value
+in value
+no name
 in value nostore
 in visit bin
 in bin
+in value
 no name
-usable regs:0 1 2 3 4 5 6 
-in value nostore
-in visit int
-in integer
-10
+in value in stored
+in value
 no name
-usable regs:1 2 3 4 5 6 
-in value nostore
-in visit int
-in integer
-11
+in value in stored
 in bin op
 in add
 in slice value
-value name : @y
-usable regs:0 1 2 3 4 5 6 
-in value nostore
-in visit alloc
-in slice value
+in value
 no name
-usable regs:0 1 2 3 4 5 6 
 in value nostore
-in visit store
-no name
-in value in stored
-in slice value
-no name
-usable regs:0 1 2 3 4 5 6 
-in value nostore
-0x18f5d20
-load name:@y
 in visit load
+in load
+0x1f59aa0
+load name:@a2_1
 in slice value
+in value
 no name
-usable regs:0 1 2 3 4 5 6 
 in value nostore
 in visit bin
 in bin
+in value
 no name
 in value in stored
+in value
 no name
-usable regs:1 2 3 4 5 6 
+in value in stored
+in bin op
+in add
+in slice value
+in value
+no name
+in value nostore
+in visit load
+in load
+0x1f5cc20
+load name:@a3_1
+in slice value
+in value
+no name
+in value nostore
+in visit bin
+in bin
+in value
+no name
+in value in stored
+in value
+no name
+in value in stored
+in bin op
+in add
+in slice value
+in value
+no name
+in value nostore
+in visit load
+in load
+0x1f5cd80
+load name:@a4_1
+in slice value
+in value
+no name
+in value nostore
+in visit bin
+in bin
+in value
+no name
+in value in stored
+in value
+no name
+in value in stored
+in bin op
+in add
+in slice value
+in value
+no name
+in value nostore
+in visit load
+in load
+0x1f5de30
+load name:@a5_1
+in slice value
+in value
+no name
+in value nostore
+in visit bin
+in bin
+in value
+no name
+in value in stored
+in value
+no name
+in value in stored
+in bin op
+in add
+in slice value
+in value
+no name
+in value nostore
+in visit load
+in load
+0x1f5df10
+load name:@a6_1
+in slice value
+in value
+no name
+in value nostore
+in visit bin
+in bin
+in value
+no name
+in value in stored
+in value
+no name
+in value in stored
+in bin op
+in add
+in slice value
+in value
+no name
+in value nostore
+in visit load
+in load
+0x1f530b0
+load name:@a7_1
+in slice value
+in value
+no name
+in value nostore
+in visit bin
+in bin
+in value
+no name
+in value in stored
+in value
+no name
+in value in stored
+in bin op
+in add
+in slice value
+in value
+no name
+in value nostore
+in visit ret
+in ret
+in value
+no name
+in value in stored
+usable regs:0 1 2 3 4 5 6 
+@a0
+0x1f4a240
+@a1
+0x1f49ba0
+@a2
+0x1f4a390
+@a3
+0x1f4a400
+@a4
+0x1f4da60
+@a5
+0x1f51070
+@a6
+0x1f513b0
+@a7
+0x1f51190
+func end, check info
+0x1f4ff00 96
+0x1f4ff90 100
+0x1f50020 104
+0x1f500b0 108
+0x1f50140 112
+0x1f501d0 116
+0x1f50260 120
+0x1f51960 124
+0x1f531f0 68
+0x1f5cfb0 72
+0x1f5d200 76
+0x1f5d290 80
+0x1f5d320 84
+0x1f5d390 88
+0x1f5d400 92
+in slice func
+in func
+func begin, check info
+0x1f4ff00 96
+0x1f4ff90 100
+0x1f50020 104
+0x1f500b0 108
+0x1f50140 112
+0x1f501d0 116
+0x1f50260 120
+0x1f51960 124
+0x1f531f0 68
+0x1f5cfb0 72
+0x1f5d200 76
+0x1f5d290 80
+0x1f5d320 84
+0x1f5d390 88
+0x1f5d400 92
+usable regs:0 1 2 3 4 5 6 
+in slice value
+in value
+value name : @a0
+in value nostore
+this name is @a0
+in argref
+number of params is 0
+in slice value
+in value
+value name : @a1
+in value nostore
+this name is @a1
+in argref
+number of params is 1
+in slice value
+in value
+value name : @a2
+in value nostore
+this name is @a2
+in argref
+number of params is 2
+in slice value
+in value
+value name : @a3
+in value nostore
+this name is @a3
+in argref
+number of params is 3
+in slice value
+in value
+value name : @a4
+in value nostore
+this name is @a4
+in argref
+number of params is 4
+in slice value
+in value
+value name : @a5
+in value nostore
+this name is @a5
+in argref
+number of params is 5
+in slice value
+in value
+value name : @a6
+in value nostore
+this name is @a6
+in argref
+number of params is 6
+in slice value
+in value
+value name : @a7
+in value nostore
+this name is @a7
+in argref
+number of params is 7
+in slice value
+in value
+value name : @a8
+in value nostore
+this name is @a8
+in argref
+number of params is 8
+in slice value
+in value
+value name : @a9
+in value nostore
+this name is @a9
+in argref
+number of params is 9
+in slice value
+in value
+value name : @a10
+in value nostore
+this name is @a10
+in argref
+number of params is 10
+in slice value
+in value
+value name : @a11
+in value nostore
+this name is @a11
+in argref
+number of params is 11
+in slice value
+in value
+value name : @a12
+in value nostore
+this name is @a12
+in argref
+number of params is 12
+in slice value
+in value
+value name : @a13
+in value nostore
+this name is @a13
+in argref
+number of params is 13
+in slice value
+in value
+value name : @a14
+in value nostore
+this name is @a14
+in argref
+number of params is 14
+in slice value
+in value
+value name : @a15
+in value nostore
+this name is @a15
+in argref
+number of params is 15
+usable regs:0 1 2 3 4 5 6 
+in slice block
+in block
+in visit block, instlen:64 paramslen:0
+usable regs:0 1 2 3 4 5 6 
+in slice value
+in value
+value name : @a0_1
+in value nostore
+in visit alloc
+in slice value
+in value
+no name
+in value nostore
+in visit store
+in value
+value name : @a0
+in value in stored varible
+in slice value
+in value
+value name : @a1_1
+in value nostore
+in visit alloc
+in slice value
+in value
+no name
+in value nostore
+in visit store
+in value
+value name : @a1
+in value in stored varible
+in slice value
+in value
+value name : @a2_1
+in value nostore
+in visit alloc
+in slice value
+in value
+no name
+in value nostore
+in visit store
+in value
+value name : @a2
+in value in stored varible
+in slice value
+in value
+value name : @a3_1
+in value nostore
+in visit alloc
+in slice value
+in value
+no name
+in value nostore
+in visit store
+in value
+value name : @a3
+in value in stored varible
+in slice value
+in value
+value name : @a4_1
+in value nostore
+in visit alloc
+in slice value
+in value
+no name
+in value nostore
+in visit store
+in value
+value name : @a4
+in value in stored varible
+in slice value
+in value
+value name : @a5_1
+in value nostore
+in visit alloc
+in slice value
+in value
+no name
+in value nostore
+in visit store
+in value
+value name : @a5
+in value in stored varible
+in slice value
+in value
+value name : @a6_1
+in value nostore
+in visit alloc
+in slice value
+in value
+no name
+in value nostore
+in visit store
+in value
+value name : @a6
+in value in stored varible
+in slice value
+in value
+value name : @a7_1
+in value nostore
+in visit alloc
+in slice value
+in value
+no name
+in value nostore
+in visit store
+in value
+value name : @a7
+in value in stored varible
+in slice value
+in value
+value name : @a8_1
+in value nostore
+in visit alloc
+in slice value
+in value
+no name
+in value nostore
+in visit store
+in value
+value name : @a8
+in value in stored varible
+in slice value
+in value
+value name : @a9_1
+in value nostore
+in visit alloc
+in slice value
+in value
+no name
+in value nostore
+in visit store
+in value
+value name : @a9
+in value in stored varible
+in slice value
+in value
+value name : @a10_1
+in value nostore
+in visit alloc
+in slice value
+in value
+no name
+in value nostore
+in visit store
+in value
+value name : @a10
+in value in stored varible
+in slice value
+in value
+value name : @a11_1
+in value nostore
+in visit alloc
+in slice value
+in value
+no name
+in value nostore
+in visit store
+in value
+value name : @a11
+in value in stored varible
+in slice value
+in value
+value name : @a12_1
+in value nostore
+in visit alloc
+in slice value
+in value
+no name
+in value nostore
+in visit store
+in value
+value name : @a12
+in value in stored varible
+in slice value
+in value
+value name : @a13_1
+in value nostore
+in visit alloc
+in slice value
+in value
+no name
+in value nostore
+in visit store
+in value
+value name : @a13
+in value in stored varible
+in slice value
+in value
+value name : @a14_1
+in value nostore
+in visit alloc
+in slice value
+in value
+no name
+in value nostore
+in visit store
+in value
+value name : @a14
+in value in stored varible
+in slice value
+in value
+value name : @a15_1
+in value nostore
+in visit alloc
+in slice value
+in value
+no name
+in value nostore
+in visit store
+in value
+value name : @a15
+in value in stored varible
+in slice value
+in value
+no name
+in value nostore
+in visit load
+in load
+0x1f594f0
+load name:@a0_1
+in slice value
+in value
+no name
+in value nostore
+in visit load
+in load
+0x1f595d0
+load name:@a1_1
+in slice value
+in value
+no name
+in value nostore
+in visit bin
+in bin
+in value
+no name
+in value in stored
+in value
+no name
+in value in stored
+in bin op
+in add
+in slice value
+in value
+no name
+in value nostore
+in visit load
+in load
+0x1f596b0
+load name:@a2_1
+in slice value
+in value
+no name
+in value nostore
+in visit bin
+in bin
+in value
+no name
+in value in stored
+in value
+no name
+in value in stored
+in bin op
+in add
+in slice value
+in value
+no name
+in value nostore
+in visit load
+in load
+0x1f59800
+load name:@a3_1
+in slice value
+in value
+no name
+in value nostore
+in visit bin
+in bin
+in value
+no name
+in value in stored
+in value
+no name
+in value in stored
+in bin op
+in add
+in slice value
+in value
+no name
+in value nostore
+in visit load
+in load
+0x1f59900
+load name:@a4_1
+in slice value
+in value
+no name
+in value nostore
+in visit bin
+in bin
+in value
+no name
+in value in stored
+in value
+no name
+in value in stored
+in bin op
+in add
+in slice value
+in value
+no name
+in value nostore
+in visit load
+in load
+0x1f50360
+load name:@a5_1
+in slice value
+in value
+no name
+in value nostore
+in visit bin
+in bin
+in value
+no name
+in value in stored
+in value
+no name
+in value in stored
+in bin op
+in add
+in slice value
+in value
+no name
+in value nostore
+in visit load
+in load
+0x1f50460
+load name:@a6_1
+in slice value
+in value
+no name
+in value nostore
+in visit bin
+in bin
+in value
+no name
+in value in stored
+in value
+no name
+in value in stored
+in bin op
+in add
+in slice value
+in value
+no name
+in value nostore
+in visit load
+in load
+0x1f50560
+load name:@a7_1
+in slice value
+in value
+no name
+in value nostore
+in visit bin
+in bin
+in value
+no name
+in value in stored
+in value
+no name
+in value in stored
+in bin op
+in add
+in slice value
+in value
+no name
+in value nostore
+in visit load
+in load
+0x1f50660
+load name:@a8_1
+in slice value
+in value
+no name
+in value nostore
+in visit bin
+in bin
+in value
+no name
+in value in stored
+in value
+no name
+in value in stored
+in bin op
+in add
+in slice value
+in value
+no name
+in value nostore
+in visit load
+in load
+0x1f508b0
+load name:@a9_1
+in slice value
+in value
+no name
+in value nostore
+in visit bin
+in bin
+in value
+no name
+in value in stored
+in value
+no name
+in value in stored
+in bin op
+in add
+in slice value
+in value
+no name
+in value nostore
+in visit load
+in load
+0x1f509f0
+load name:@a10_1
+in slice value
+in value
+no name
+in value nostore
+in visit bin
+in bin
+in value
+no name
+in value in stored
+in value
+no name
+in value in stored
+in bin op
+in add
+in slice value
+in value
+no name
+in value nostore
+in visit load
+in load
+0x1f50b30
+load name:@a11_1
+in slice value
+in value
+no name
+in value nostore
+in visit bin
+in bin
+in value
+no name
+in value in stored
+in value
+no name
+in value in stored
+in bin op
+in add
+in slice value
+in value
+no name
+in value nostore
+in visit load
+in load
+0x1f50c70
+load name:@a12_1
+in slice value
+in value
+no name
+in value nostore
+in visit bin
+in bin
+in value
+no name
+in value in stored
+in value
+no name
+in value in stored
+in bin op
+in add
+in slice value
+in value
+no name
+in value nostore
+in visit load
+in load
+0x1f50db0
+load name:@a13_1
+in slice value
+in value
+no name
+in value nostore
+in visit bin
+in bin
+in value
+no name
+in value in stored
+in value
+no name
+in value in stored
+in bin op
+in add
+in slice value
+in value
+no name
+in value nostore
+in visit load
+in load
+0x1f50ef0
+load name:@a14_1
+in slice value
+in value
+no name
+in value nostore
+in visit bin
+in bin
+in value
+no name
+in value in stored
+in value
+no name
+in value in stored
+in bin op
+in add
+in slice value
+in value
+no name
+in value nostore
+in visit load
+in load
+0x1f5b890
+load name:@a15_1
+in slice value
+in value
+no name
+in value nostore
+in visit bin
+in bin
+in value
+no name
+in value in stored
+in value
+no name
+in value in stored
+in bin op
+in add
+in slice value
+in value
+no name
+in value nostore
+in visit ret
+in ret
+in value
+no name
+in value in stored
+usable regs:0 1 2 3 4 5 6 
+@a0
+0x1f51ac0
+@a1
+0x1f51b50
+@a2
+0x1f51be0
+@a3
+0x1f51c70
+@a4
+0x1f51d00
+@a5
+0x1f51d90
+@a6
+0x1f51e20
+@a7
+0x1f51eb0
+@a8
+0x1f51f40
+@a9
+0x1f52010
+@a10
+0x1f52b40
+@a11
+0x1f52c10
+@a12
+0x1f52ce0
+@a13
+0x1f52db0
+@a14
+0x1f52e80
+@a15
+0x1f52f50
+func end, check info
+0x1f4ff00 96
+0x1f4ff90 100
+0x1f50020 104
+0x1f500b0 108
+0x1f50140 112
+0x1f501d0 116
+0x1f50260 120
+0x1f51960 124
+0x1f531f0 68
+0x1f59ee0 232
+0x1f59f70 236
+0x1f5a000 240
+0x1f5a090 244
+0x1f5a120 248
+0x1f5a1b0 252
+0x1f5b9d0 132
+0x1f5bc70 136
+0x1f5bd00 140
+0x1f5bd90 144
+0x1f5be20 148
+0x1f5beb0 152
+0x1f5bf40 156
+0x1f5bfd0 160
+0x1f5c060 164
+0x1f5c0f0 168
+0x1f5c180 172
+0x1f5c210 176
+0x1f5c2a0 180
+0x1f5c330 184
+0x1f5c3c0 188
+0x1f5c450 192
+0x1f5c4e0 196
+0x1f5c570 200
+0x1f5c600 204
+0x1f5c690 208
+0x1f5cfb0 72
+0x1f5d200 76
+0x1f5d290 80
+0x1f5d320 84
+0x1f5d390 88
+0x1f5d400 92
+0x1f5fad0 212
+0x1f5fb40 216
+0x1f5fbd0 220
+0x1f5fc60 224
+0x1f5fcf0 228
+in slice func
+in func
+func begin, check info
+0x1f4ff00 96
+0x1f4ff90 100
+0x1f50020 104
+0x1f500b0 108
+0x1f50140 112
+0x1f501d0 116
+0x1f50260 120
+0x1f51960 124
+0x1f531f0 68
+0x1f59ee0 232
+0x1f59f70 236
+0x1f5a000 240
+0x1f5a090 244
+0x1f5a120 248
+0x1f5a1b0 252
+0x1f5b9d0 132
+0x1f5bc70 136
+0x1f5bd00 140
+0x1f5bd90 144
+0x1f5be20 148
+0x1f5beb0 152
+0x1f5bf40 156
+0x1f5bfd0 160
+0x1f5c060 164
+0x1f5c0f0 168
+0x1f5c180 172
+0x1f5c210 176
+0x1f5c2a0 180
+0x1f5c330 184
+0x1f5c3c0 188
+0x1f5c450 192
+0x1f5c4e0 196
+0x1f5c570 200
+0x1f5c600 204
+0x1f5c690 208
+0x1f5cfb0 72
+0x1f5d200 76
+0x1f5d290 80
+0x1f5d320 84
+0x1f5d390 88
+0x1f5d400 92
+0x1f5fad0 212
+0x1f5fb40 216
+0x1f5fbd0 220
+0x1f5fc60 224
+0x1f5fcf0 228
+usable regs:0 1 2 3 4 5 6 
+usable regs:0 1 2 3 4 5 6 
+in slice block
+in block
+in visit block, instlen:10 paramslen:0
+usable regs:0 1 2 3 4 5 6 
+in slice value
+in value
+no name
+in value nostore
+in call
+usable regs:0 1 2 3 4 5 6 
+in slice value
+in value
+no name
 in value nostore
 in visit int
 in integer
 1
-in bin op
-in add
+in slice value calls
 in slice value
+in value
 no name
-usable regs:0 1 2 3 4 5 6 
 in value nostore
-in visit store
-no name
-in value in stored
+in visit int
+in integer
+2
+in slice value calls
 in slice value
+in value
 no name
-usable regs:0 1 2 3 4 5 6 
 in value nostore
-in visit bin
-in bin
+in visit int
+in integer
+3
+in slice value calls
+in slice value
+in value
 no name
-in value in stored
+in value nostore
+in visit int
+in integer
+4
+in slice value calls
+in slice value
+in value
 no name
-usable regs:1 2 3 4 5 6 
+in value nostore
+in visit int
+in integer
+5
+in slice value calls
+in slice value
+in value
+no name
+in value nostore
+in visit int
+in integer
+6
+in slice value calls
+in slice value
+in value
+no name
 in value nostore
 in visit int
 in integer
 7
-in bin op
-in mul
+in slice value calls
 in slice value
+in value
 no name
-usable regs:0 1 2 3 4 5 6 
 in value nostore
-0x18f5830
-load name:@x
-in visit load
+in visit int
+in integer
+8
+in slice value calls
 in slice value
-no name
-usable regs:0 1 2 3 4 5 6 
-in value nostore
-in visit bin
-in bin
-no name
-in value in stored
-no name
-in value in stored
-in bin op
-in sub
-in slice value
-value name : @z
-usable regs:0 1 2 3 4 5 6 
+in value
+value name : @x_1
 in value nostore
 in visit alloc
 in slice value
+in value
 no name
-usable regs:0 1 2 3 4 5 6 
 in value nostore
 in visit store
+in value
 no name
 in value in stored
 in slice value
+in value
 no name
-usable regs:0 1 2 3 4 5 6 
 in value nostore
-0x18f5d20
-load name:@y
-in visit load
+in call
+usable regs:0 1 2 3 4 5 6 
 in slice value
+in value
 no name
-usable regs:0 1 2 3 4 5 6 
-in value nostore
-in visit bin
-in bin
-no name
-in value in stored
-no name
-in value in stored
-in bin op
-in sub
-in slice value
-value name : @w
-usable regs:0 1 2 3 4 5 6 
-in value nostore
-in visit alloc
-in slice value
-no name
-usable regs:0 1 2 3 4 5 6 
-in value nostore
-in visit store
-no name
-in value in stored
-in slice value
-no name
-usable regs:0 1 2 3 4 5 6 
-in value nostore
-0x18f0c10
-load name:@w
-in visit load
-in slice value
-no name
-usable regs:0 1 2 3 4 5 6 
-in value nostore
-in visit bin
-in bin
-no name
-in value in stored
-no name
-usable regs:1 2 3 4 5 6 
 in value nostore
 in visit int
 in integer
 1
-in bin op
-in mul
+in slice value calls
 in slice value
+in value
 no name
-usable regs:0 1 2 3 4 5 6 
-in value nostore
-in visit bin
-in bin
-no name
-in value in stored
-no name
-usable regs:1 2 3 4 5 6 
 in value nostore
 in visit int
 in integer
-1
-in bin op
-in mul
+2
+in slice value calls
 in slice value
+in value
 no name
-usable regs:0 1 2 3 4 5 6 
-in value nostore
-in visit bin
-in bin
-no name
-in value in stored
-no name
-usable regs:1 2 3 4 5 6 
 in value nostore
 in visit int
 in integer
-1
-in bin op
-in mul
+3
+in slice value calls
 in slice value
+in value
 no name
-usable regs:0 1 2 3 4 5 6 
 in value nostore
-in visit store
-no name
-in value in stored
+in visit int
+in integer
+4
+in slice value calls
 in slice value
+in value
 no name
-usable regs:0 1 2 3 4 5 6 
 in value nostore
-0x18f0c10
-load name:@w
-in visit load
+in visit int
+in integer
+5
+in slice value calls
 in slice value
+in value
 no name
-usable regs:0 1 2 3 4 5 6 
 in value nostore
-0x18f6490
-load name:@z
-in visit load
+in visit int
+in integer
+6
+in slice value calls
 in slice value
+in value
 no name
-usable regs:0 1 2 3 4 5 6 
 in value nostore
-in visit bin
-in bin
-no name
-in value in stored
-no name
-in value in stored
-in bin op
-in add
+in visit int
+in integer
+7
+in slice value calls
 in slice value
+in value
 no name
-usable regs:0 1 2 3 4 5 6 
 in value nostore
-in visit ret
-in ret
+in visit int
+in integer
+8
+in slice value calls
+in slice value
+in value
 no name
-in value in stored
-usable regs:0 1 2 3 4 5 6 
+in value nostore
+in visit int
+in integer
+9
+in slice value calls

@@ -37,12 +37,12 @@ using namespace std;
 
 // lexer 返回的所有 token 种类的声明
 // 注意 IDENT 和 INT_CONST 会返回 token 的值, 分别对应 str_val 和 int_val
-%token INT RETURN CONST IF ELSE WHILE BREAK CONTINUE
+%token INT RETURN CONST IF ELSE WHILE BREAK CONTINUE VOID
 %token <str_val> IDENT
 %token <int_val> INT_CONST
 
 // 非终结符的类型定义
-%type <ast_val> FuncDef FuncType Block Stmt Number Exp LOrExp LAndExp EqExp RelExp AddExp MulExp UnaryExp PrimaryExp BlockItem Decl ConstDecl ConstDef ConstInitVal VarDecl VarDef InitVal ConstExp
+%type <ast_val> FuncFParams FuncRParams CompUnitB FuncDef Block Stmt Number Exp LOrExp LAndExp EqExp RelExp AddExp MulExp UnaryExp PrimaryExp BlockItem Decl ConstDecl ConstDef ConstInitVal VarDecl VarDef InitVal ConstExp
 
 %%
 
@@ -52,10 +52,47 @@ using namespace std;
 // 此时我们应该把 FuncDef 返回的结果收集起来, 作为 AST 传给调用 parser 的函数
 // $1 指代规则里第一个符号的返回值, 也就是 FuncDef 的返回值
 CompUnit
+  : CompUnitB{
+    auto program = make_unique<CompUnitAST>();
+    program -> compunit = unique_ptr<BaseAST>($1);
+    ast = move(program);
+  }
+
+CompUnitB
+  : CompUnitB FuncDef {
+    auto comp_unit = new CompUnitBAST();
+    comp_unit-> compunit = unique_ptr<BaseAST>($1);
+    comp_unit -> func_def = unique_ptr<BaseAST>($2);
+    comp_unit->type = 1;
+    $$ = comp_unit;
+  }
+  ;
+
+CompUnitB
   : FuncDef {
-    auto comp_unit = make_unique<CompUnitAST>();
+    auto comp_unit = new CompUnitBAST();
     comp_unit->func_def = unique_ptr<BaseAST>($1);
-    ast = move(comp_unit);
+    comp_unit->type = 3;
+    $$ = comp_unit;
+  }
+  ;
+
+CompUnitB
+  : CompUnitB Decl {
+    auto comp_unit = new CompUnitBAST();
+    comp_unit-> compunit = unique_ptr<BaseAST>($1);
+    comp_unit -> decl = unique_ptr<BaseAST>($2);
+    comp_unit->type = 2;
+    $$ = comp_unit;
+  }
+  ;
+
+CompUnitB
+  : Decl {
+    auto comp_unit = new CompUnitBAST();
+    comp_unit->decl = unique_ptr<BaseAST>($1);
+    comp_unit->type = 4;
+    $$ = comp_unit;
   }
   ;
 
@@ -70,23 +107,66 @@ CompUnit
 // 虽然此处你看不出用 unique_ptr 和手动 delete 的区别, 但当我们定义了 AST 之后
 // 这种写法会省下很多内存管理的负担
 FuncDef
-  : FuncType IDENT '(' ')' Block {
+  : INT IDENT '(' ')' Block {
     auto ast = new FuncDefAST();
-    ast->func_type = unique_ptr<BaseAST>($1);
     ast->ident = *unique_ptr<string>($2);
     ast->block = unique_ptr<BaseAST>($5);
+    ast->type = 1;
     $$ = ast;
   }
   ;
 
-// 同上, 不再解释
-FuncType
-  : INT {
-      auto type = new FuncTypeAST();
-      type->functype = "int";
-      $$ = type;
+FuncDef
+  : INT IDENT '(' FuncFParams ')' Block {
+    auto ast = new FuncDefAST();
+    ast->ident = *unique_ptr<string>($2);
+    ast->fparams = unique_ptr<BaseAST>($4);
+    ast->block = unique_ptr<BaseAST>($6);
+    ast->type = 2;
+    $$ = ast;
   }
   ;
+
+FuncDef
+  : VOID IDENT '(' ')' Block {
+    auto ast = new FuncDefAST();
+    ast->ident = *unique_ptr<string>($2);
+    ast->block = unique_ptr<BaseAST>($5);
+    ast->type = 3;
+    $$ = ast;
+  }
+  ;
+
+FuncDef
+  : VOID IDENT '(' FuncFParams ')' Block {
+    auto ast = new FuncDefAST();
+    ast->ident = *unique_ptr<string>($2);
+    ast->fparams = unique_ptr<BaseAST>($4);
+    ast->block = unique_ptr<BaseAST>($6);
+    ast->type = 4;
+    $$ = ast;
+  }
+  ;
+
+FuncFParams
+  : INT IDENT ',' FuncFParams {
+    auto funcfparams = new FuncFParamsAST();
+    funcfparams -> type = 1;
+    funcfparams -> fparams = unique_ptr<BaseAST>($4);
+    funcfparams -> ident = *unique_ptr<string>($2);
+    $$ = funcfparams;
+  }
+  ;
+
+FuncFParams
+  : INT IDENT {
+    auto funcfparams = new FuncFParamsAST();
+    funcfparams -> type = 2;
+    funcfparams -> ident = *unique_ptr<string>($2);
+    $$ = funcfparams;
+  }
+  ;
+
 
 Block
   : '{' BlockItem '}' {
@@ -341,7 +421,7 @@ Stmt
   ;
 
 Stmt
-  : While '(' Exp ')' Stmt{
+  : WHILE '(' Exp ')' Stmt{
     auto stmt = new StmtAST();
     stmt -> exp= unique_ptr<BaseAST>($3);
     stmt -> ifstmt = unique_ptr<BaseAST>($5);
@@ -351,7 +431,7 @@ Stmt
   ;
 
 Stmt
-  : BREAK{
+  : BREAK ';'{
     auto stmt = new StmtAST();
     stmt -> type = 10;
     $$ = stmt;
@@ -359,10 +439,8 @@ Stmt
   ;
 
   Stmt
-  : CONTINUE{
+  : CONTINUE ';'{
     auto stmt = new StmtAST();
-    stmt -> exp= unique_ptr<BaseAST>($3);
-    stmt -> ifstmt = unique_ptr<BaseAST>($5);
     stmt -> type = 11;
     $$ = stmt;
   }
@@ -595,6 +673,42 @@ UnaryExp
     $$ = unaryexp;
   }
   ;
+
+UnaryExp
+  : IDENT '(' ')' {
+    auto unaryexp = new UnaryExpAST();
+    unaryexp -> ident = *unique_ptr<string>($1);
+    unaryexp -> type = 5;
+    $$ = unaryexp;
+  }
+  ;
+
+UnaryExp
+  : IDENT '(' FuncRParams ')' {
+    auto unaryexp = new UnaryExpAST();
+    unaryexp -> ident = *unique_ptr<string>($1);
+    unaryexp -> rparams = unique_ptr<BaseAST>($3);
+    unaryexp -> type = 6;
+    $$ = unaryexp;
+  }
+  ;
+
+FuncRParams 
+  : Exp ',' FuncRParams {
+    auto funcrparams = new FuncRParamsAST();
+    funcrparams -> type = 1;
+    funcrparams -> exp = unique_ptr<BaseAST>($1);
+    funcrparams -> rparams = unique_ptr<BaseAST>($3);
+    $$ = funcrparams;
+  }
+
+FuncRParams 
+  : Exp {
+    auto funcrparams = new FuncRParamsAST();
+    funcrparams -> type = 2;
+    funcrparams -> exp = unique_ptr<BaseAST>($1);
+    $$ = funcrparams;
+  }
 
 PrimaryExp
   : '(' Exp ')' {

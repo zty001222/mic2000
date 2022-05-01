@@ -2,7 +2,7 @@
       std::cout << koopa_str;
 build/compiler -koopa hello.c -o hello.koopa
 build/compiler -riscv hello.c -o hello.asm
-sudo docker run -it --rm -v ~/Desktop:/root/compiler maxxing/compiler-dev bash
+sudo docker run -it --rm -v ~/Desktop/mic2000:/root/compiler maxxing/compiler-dev bash
 autotest -koopa -s lv3 /root/compiler
 autotest -riscv -s lv3 /root/compiler
 

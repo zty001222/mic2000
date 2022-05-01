@@ -13,15 +13,25 @@
 char asm_out[10000];
 
 stack<int> calstack;
+stack<int> immstack;
 map<koopa_raw_value_t,int> saved_bin;
 map<koopa_raw_value_t,int> saved_bin_stack;
 
 
 char regs[7][3] = {"t0","t1","t2","t3","t4","t5","t6"};
 bool used[7] = {0,0,0,0,0,0,0};
+char params_regs[8][3] = {"a0","a1","a2","a3","a4","a5","a6","a7"};
+bool params_used[8] = {0,0,0,0,0,0,0};
 char us[7][3];
 map<std::string, int> alloc_pos;
 int sp_max;
+int calls;
+int params;
+int gallocs;
+int galloc;
+int zeroinit;
+int sys_funcs = 8;
+vector<string> funcalloc;
 
 
 void Visit(const koopa_raw_program_t &program);
@@ -37,6 +47,9 @@ void Visit(const koopa_raw_store_t &store);
 void Visit(const koopa_raw_load_t &load);
 void Visit(const koopa_raw_jump_t &jmp);
 void Visit(const koopa_raw_branch_t &branch);
+void Visit(const koopa_raw_call_t &call);
+void Visit(const koopa_raw_func_arg_ref_t &argref);
+void Visit(const koopa_raw_global_alloc_t &galloc);
 void show_usable_regs();
 void deal_with_IR(const char * str);
 
@@ -47,6 +60,19 @@ void show_usable_regs(){
       cout<<i<<" ";
   }
   cout<<endl;
+}
+void check_info(){
+  map<koopa_raw_value_t,int>::iterator it1;
+  map<std::string, int>::iterator it2;
+  for(it1 = saved_bin_stack.begin(); it1 != saved_bin_stack.end() ; it1++){
+    cout<<it1->first<<" "<<it1->second<<endl;
+  }
+  for(it2 = alloc_pos.begin(); it2 != alloc_pos.end() ; it2++){
+    cout<<it2->first<<" "<<it2->second<<endl;
+  }
+  for(int i = 0 ; i < funcalloc.size() ; i ++){
+    cout<<funcalloc[i]<<endl;
+  }
 }
 
 void deal_with_IR(const char * str){
@@ -82,7 +108,6 @@ void deal_with_IR(const char * str){
 void Visit(const koopa_raw_program_t &program) {
   // 执行一些其他的必要操作
   std::cout<<"in program"<<endl;
-  strcat(asm_out, "  .text\n");
   // 访问所有全局变量
   Visit(program.values);
   // 访问所有函数
@@ -110,6 +135,34 @@ void Visit(const koopa_raw_slice_t &slice) {
         std::cout<<"in slice value"<<endl;
         // 访问指令
         Visit(reinterpret_cast<koopa_raw_value_t>(ptr));
+        if(calls){
+          std::cout<<"in slice value calls"<<endl;
+          if(calstack.empty()){
+            cout<<"how come it's empty??????????"<<endl;
+          }
+          std::cout<<"stackok"<<endl;
+          int reg = calstack.top();
+          used[reg] = 0;
+          if(params < 8){
+            strcat(asm_out, "  add a");
+            strcat(asm_out, to_string(params).c_str());
+            strcat(asm_out, ", zero");
+            strcat(asm_out, ", t");
+            strcat(asm_out, to_string(reg).c_str());
+            strcat(asm_out, "\n");
+            params++;
+          }
+          else{
+            strcat(asm_out, "  sw t");
+            strcat(asm_out, to_string(calstack.top()).c_str());
+            strcat(asm_out, ", ");
+            strcat(asm_out, to_string(1024-4*(params-7)).c_str());
+            strcat(asm_out, "(sp)\n");
+            params++;
+          }
+          calstack.pop();
+        }
+          std::cout<<"in slice value calls ends"<<endl;
         break;
       default:
         // 我们暂时不会遇到其他内容, 于是不对其做任何处理
@@ -121,10 +174,39 @@ void Visit(const koopa_raw_slice_t &slice) {
 // 访问函数
 void Visit(const koopa_raw_function_t &func) {
   cout<<"in func"<<endl;
+  cout<<"func begin, check info"<<endl;
+  check_info();
   // 执行一些其他的必要操作
-  strcat(asm_out, "  .globl main\n");
+  if(sys_funcs){
+    sys_funcs--;return;
+  }
+  sp_max = 0;
+  strcat(asm_out, "\n  .text\n");
+  strcat(asm_out, "  .globl ");
+  strcat(asm_out, func->name+1);
+  strcat(asm_out, "\n");
+  strcat(asm_out, func->name+1);
+  strcat(asm_out,":\n");
+  strcat(asm_out, "  addi sp, sp, -1024\n");
+  strcat(asm_out, "  sw ra, 0(sp)\n");
+  sp_max+=4;
+  Visit(func->params);
   // 访问所有基本块
   Visit(func->bbs);
+  //clean var table
+  for(int i = 0 ; i < func->params.len ; i++){
+    auto ptr = func->params.buffer[i];
+    cout<<reinterpret_cast<koopa_raw_value_t>(ptr)->name<<endl;
+    cout<<reinterpret_cast<koopa_raw_value_t>(ptr)<<endl;
+    alloc_pos.erase(reinterpret_cast<koopa_raw_value_t>(ptr)->name);
+    saved_bin_stack = *new map<koopa_raw_value_t,int>();
+  }
+  while(!funcalloc.empty()){
+    alloc_pos.erase(funcalloc.back());
+    funcalloc.pop_back();
+  }
+  cout<<"func end, check info"<<endl;
+  check_info();
 }
 
 // 访问基本块
@@ -132,8 +214,6 @@ void Visit(const koopa_raw_basic_block_t &bb) {
   cout<<"in block"<<endl;
   // 执行一些其他的必要操作
   if(strcmp(bb->name,"%entry") == 0){
-    strcat(asm_out,"main:\n");
-    strcat(asm_out, "  addi sp, sp, -1024\n");
   }
   else{
     strcat(asm_out,bb->name + 1);
@@ -147,6 +227,7 @@ void Visit(const koopa_raw_basic_block_t &bb) {
 
 // 访问指令
 void Visit(const koopa_raw_value_t &value) {
+  cout<<"in value"<<endl;
   const char * name = value->name;
   std::string tmpstring;
   if(name == NULL){cout<<"no name"<<endl;}
@@ -170,23 +251,47 @@ void Visit(const koopa_raw_value_t &value) {
   }
   else if(name != NULL && (alloc_pos.find(tmpstring) != alloc_pos.end())){
     cout<<"in value in stored varible"<<endl;
-    int reg = 0;
+    int reg1 = 0;
       for(int i = 0 ; i < 7 ; i++){
           if(used[i] == 0){
               used[i] = 1;
-              reg = i;
+              reg1 = i;
               break;
           }
       }
-      strcat(asm_out, "  lw t");
-      strcat(asm_out, to_string(reg).c_str());
-      strcat(asm_out, ", ");
-      strcat(asm_out, to_string(alloc_pos[name]).c_str());
-      strcat(asm_out, "(sp)\n");
-      calstack.push(reg);
+    int reg2 = 0;
+      for(int i = 0 ; i < 7 ; i++){
+          if(used[i] == 0){
+              used[i] = 1;
+              reg2 = i;
+              break;
+          }
+      }
+      if(alloc_pos[name] >= 0){
+        strcat(asm_out, "  lw t");
+        strcat(asm_out, to_string(reg1).c_str());
+        strcat(asm_out, ", ");
+        strcat(asm_out, to_string(alloc_pos[name]).c_str());
+        strcat(asm_out, "(sp)\n");
+      }
+      else{
+        strcat(asm_out, "  la t");
+        strcat(asm_out, to_string(reg2).c_str());
+        strcat(asm_out, ", var\n");
+        strcat(asm_out, "  lw t");
+        strcat(asm_out, to_string(reg1).c_str());
+        strcat(asm_out, ", ");
+        strcat(asm_out, to_string(-4-alloc_pos[name]).c_str());
+        strcat(asm_out, "(t");
+        strcat(asm_out, to_string(reg2).c_str());
+        strcat(asm_out, ")\n");
+
+      }
+      used[reg2] = 0;
+      calstack.push(reg1);
   }
   else{
-    show_usable_regs();
+    
     cout<<"in value nostore"<<endl;
     // 根据指令类型判断后续需要如何访问
     const auto &kind = value->kind;
@@ -245,14 +350,33 @@ void Visit(const koopa_raw_value_t &value) {
               if(alloc_pos.find(sname) == alloc_pos.end()){
                   alloc_pos[sname] = sp_max;
               }
+              funcalloc.push_back(sname);
               // 访问 integer 指令
               sp_max += 4;
           }
           break;
       case KOOPA_RVT_GLOBAL_ALLOC: 
+        galloc = 1;
+        zeroinit = 0;
         std::cout<<"in visit g-alloc"<<endl;
+        if(gallocs == 0){
+          strcat(asm_out, "  .data\n  .globl var\nvar:\n");
+        }
+        cout<<value->name<<endl;
+        alloc_pos[value->name] = -(4*(1+gallocs++));
+        Visit(kind.data.global_alloc);
+        galloc = 0;
+        if(zeroinit)
+          strcat(asm_out, "  .zero 4\n");
+        else{
+          strcat(asm_out, "  .word ");
+          strcat(asm_out, to_string(immstack.top()).c_str());
+          immstack.pop();
+          strcat(asm_out, "\n");
+        }
         break;
       case KOOPA_RVT_LOAD:{
+          std::cout<<"in visit load"<<endl;
           Visit(kind.data.load);
           if(calstack.empty()){
             cout<<"empty error"<<endl;
@@ -261,7 +385,6 @@ void Visit(const koopa_raw_value_t &value) {
           used[reg] = 0;
           calstack.pop();
           saved_bin_stack[value] = sp_max;
-          std::cout<<"in visit load"<<endl;
           strcat(asm_out, "  sw t");
           strcat(asm_out, to_string(reg).c_str());
           strcat(asm_out, ", ");
@@ -278,9 +401,90 @@ void Visit(const koopa_raw_value_t &value) {
           cout<<"in jump"<<endl;  
           Visit(kind.data.jump);
           break;
+      case KOOPA_RVT_CALL:
+          Visit(kind.data.call);
+          saved_bin_stack[value] = sp_max;
+          strcat(asm_out, "  sw t");
+          strcat(asm_out, to_string(calstack.top()).c_str());
+          strcat(asm_out, ", ");
+          strcat(asm_out, to_string(saved_bin_stack[value]).c_str());
+          strcat(asm_out, "(sp)\n");
+          used[calstack.top()] = 0;
+          calstack.pop();
+          sp_max += 4;
+        break;
+      case KOOPA_RVT_FUNC_ARG_REF:
+        cout<<"this name is "<<value->name<<endl;
+        Visit(kind.data.func_arg_ref);
+        if(kind.data.func_arg_ref.index < 8){
+          strcat(asm_out, "  sw a");
+          strcat(asm_out, to_string(kind.data.func_arg_ref.index).c_str());
+          strcat(asm_out, ", ");
+          strcat(asm_out, to_string(sp_max).c_str());
+          strcat(asm_out, "(sp)\n");
+          alloc_pos[value->name] = sp_max;
+          sp_max += 4;
+        }
+        else{
+          int tmp = 0;
+          for(int i = 0; i < 7 ; i++){
+            if(used[i] == 0){tmp = i;break;}
+          }
+          int tmpshift = 2048-4*(kind.data.func_arg_ref.index-7);
+          strcat(asm_out, "  lw t");
+          strcat(asm_out, to_string(tmp).c_str());
+          strcat(asm_out, ", ");
+          strcat(asm_out, to_string(tmpshift).c_str());
+          strcat(asm_out, "(sp)\n");
+          strcat(asm_out, "  sw t");
+          strcat(asm_out, to_string(tmp).c_str());
+          strcat(asm_out, ", ");
+          strcat(asm_out, to_string(sp_max).c_str());
+          strcat(asm_out, "(sp)\n");
+          alloc_pos[value->name] = sp_max;
+          sp_max += 4;
+        }
+        break;
+      case KOOPA_RVT_ZERO_INIT:
+          cout<<"in zero init"<<endl;  
+          zeroinit = 1;
+          break;
       default:
         // 其他类型暂时遇不到
         assert(false);
+    }
+  }
+}
+
+
+void Visit(const koopa_raw_global_alloc_t &galloc){
+  Visit(galloc.init);
+}
+
+void Visit(const koopa_raw_func_arg_ref_t &argref){
+  cout<<"in argref"<<endl;
+  int nums = argref.index;
+  cout<<"number of params is "<<nums<<endl;
+}
+ 
+void Visit(const koopa_raw_call_t &call){
+  cout<<"in call"<<endl;
+  calls = 1;
+  params = 0;
+  Visit(call.args);
+  calls = 0;
+  params = 0;
+  strcat(asm_out, "  call ");
+  strcat(asm_out, call.callee->name + 1);
+  strcat(asm_out, "\n");
+  for(int i = 0 ; i < 7 ;i ++){
+    if(used[i] == 0){
+      strcat(asm_out, "  add t");
+      strcat(asm_out, to_string(i).c_str());
+      strcat(asm_out, ", zero, a0\n");
+      used[i] = 1;
+      calstack.push(i);
+      break;
     }
   }
 }
@@ -299,6 +503,7 @@ void Visit(const koopa_raw_branch_t &branch){
   strcat(asm_out, "  j ");
   strcat(asm_out, branch.false_bb->name + 1);
   strcat(asm_out, "\n");
+  used[reg] = 0;
 }
 
 void Visit(const koopa_raw_jump_t &jmp){
@@ -317,12 +522,15 @@ void Visit(const koopa_raw_integer_t &intval){
   for(int i = 0 ; i < 7 ; i ++){
     if(used[i] == 0){
       used[i] = 1;
-      strcat(asm_out,"  li t");
-      strcat(asm_out,to_string(i).c_str());
-      strcat(asm_out,", ");
-      strcat(asm_out, to_string(intval.value).c_str());
-      strcat(asm_out, "\n");
-      calstack.push(i);
+      if(!galloc){
+        strcat(asm_out,"  li t");
+        strcat(asm_out,to_string(i).c_str());
+        strcat(asm_out,", ");
+        strcat(asm_out, to_string(intval.value).c_str());
+        strcat(asm_out, "\n");
+        calstack.push(i);
+      }
+      immstack.push(intval.value);
       break;
     }
   }
@@ -330,16 +538,24 @@ void Visit(const koopa_raw_integer_t &intval){
 
 void Visit(const koopa_raw_return_t &ret){
   cout<<"in ret"<<endl;
-  Visit(ret.value);
-  int p1 = calstack.top();
-  calstack.pop();
-  strcat(asm_out,"  add a0, a0");
-  strcat(asm_out,", t");
-  strcat(asm_out,to_string(p1).c_str());
-  strcat(asm_out,"\n");
-  used[p1] = 0;
-  strcat(asm_out, "  addi sp, sp, 1024\n");
-  strcat(asm_out,"  ret\n");
+  if(ret.value){
+    Visit(ret.value);
+    int p1 = calstack.top();
+    calstack.pop();
+    strcat(asm_out,"  add a0, zero");
+    strcat(asm_out,", t");
+    strcat(asm_out,to_string(p1).c_str());
+    strcat(asm_out,"\n");
+    used[p1] = 0;
+    strcat(asm_out, "  lw ra, 0(sp)\n");
+    strcat(asm_out, "  addi sp, sp, 1024\n");
+    strcat(asm_out,"  ret\n");
+  }
+  else{
+    strcat(asm_out, "  lw ra, 0(sp)\n");
+    strcat(asm_out, "  addi sp, sp, 1024\n");
+    strcat(asm_out,"  ret\n");
+  }
 }
 
 void Visit(const koopa_raw_binary_t &bin){
@@ -723,41 +939,88 @@ void Visit(const koopa_raw_binary_op_t &op){
   }
 }
 
-
 void Visit(const koopa_raw_store_t &store){
     string sname = store.dest->name;
     
     Visit(store.value);
     int loadreg = calstack.top();
     calstack.pop();
-
-    strcat(asm_out, "  sw t");
-    strcat(asm_out, to_string(loadreg).c_str());
-    strcat(asm_out, ", ");
-    strcat(asm_out, to_string(alloc_pos[sname]).c_str());
-    strcat(asm_out, "(sp)\n");
     
+    int reg = 0;
+    for(int i = 0 ; i < 7 ; i ++){
+      if(used[i] == 0){
+        used[i] = 1;
+        reg = i;
+        break;
+      }
+    }
+
+    if(alloc_pos[sname] >= 0){
+      strcat(asm_out, "  sw t");
+      strcat(asm_out, to_string(loadreg).c_str());
+      strcat(asm_out, ", ");
+      strcat(asm_out, to_string(alloc_pos[sname]).c_str());
+      strcat(asm_out, "(sp)\n");
+    }
+    else{
+      strcat(asm_out, "  la t");
+      strcat(asm_out, to_string(reg).c_str());
+      strcat(asm_out, ", var\n");
+      strcat(asm_out, "  sw t");
+      strcat(asm_out, to_string(loadreg).c_str());
+      strcat(asm_out, ", ");
+      strcat(asm_out, to_string(-4-alloc_pos[sname]).c_str());
+      strcat(asm_out, "(t");
+      strcat(asm_out, to_string(reg).c_str());
+      strcat(asm_out, ")\n");
+    }
+    
+    used[reg] = 0;
     used[loadreg] = 0;
 }
 
 void Visit(const koopa_raw_load_t &load){
+    cout<<"in load"<<endl;
     cout<< load.src<<endl;
-    int reg = 0;
+    int reg1 = 0;
         for(int i = 0 ; i < 7 ; i++){ 
             //find aviliable reg
             if(used[i] == 0){
                 used[i] = 1;
-                reg = i;break;
+                reg1 = i;break;
+            }
+        }
+    int reg2 = 0;
+        for(int i = 0 ; i < 7 ; i++){ 
+            //find aviliable reg
+            if(used[i] == 0){
+                used[i] = 1;
+                reg2 = i;break;
             }
         }
     string sname = load.src->name;
     cout<<"load name:"<<sname<<endl;
 
-    strcat(asm_out, "  lw t");
-    strcat(asm_out, to_string(reg).c_str());
-    strcat(asm_out, ", ");
-    strcat(asm_out, to_string(alloc_pos[sname]).c_str());
-    strcat(asm_out, "(sp)\n");
-    calstack.push(reg);
+    if(alloc_pos[sname] >= 0){
+      strcat(asm_out, "  lw t");
+      strcat(asm_out, to_string(reg1).c_str());
+      strcat(asm_out, ", ");
+      strcat(asm_out, to_string(alloc_pos[sname]).c_str());
+      strcat(asm_out, "(sp)\n");
+    }
+    else{
+      strcat(asm_out, "  la t");
+      strcat(asm_out, to_string(reg2).c_str());
+      strcat(asm_out, ", var\n");
+      strcat(asm_out, "  lw t");
+      strcat(asm_out, to_string(reg1).c_str());
+      strcat(asm_out, ", ");
+      strcat(asm_out, to_string(-4-alloc_pos[sname]).c_str());
+      strcat(asm_out, "(t");
+      strcat(asm_out, to_string(reg2).c_str());
+      strcat(asm_out, ")\n");
+    }
+    used[reg2] = 0;
+    calstack.push(reg1);
     
 }
