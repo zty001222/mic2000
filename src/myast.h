@@ -28,6 +28,7 @@ static vector<map<std::string, std::string> > const_symtbl_b;
 static vector<map<std::string, std::string> > saved_var_symtbl_b;
 static vector<map<std::string, std::string> > saved_const_symtbl_b;
 static vector<map<std::string, vector<int> > > array_index;
+static map<std::string, vector<int> > tmp_array_index;
 static map<std::string, std::string> func_tbl;
 static map<std::string, int> quick_ret;
 static std::string cur_func;
@@ -134,6 +135,7 @@ public:
 
   void Dump() const override
   {
+    cout<<"in func def : "<<array_index.size()<<endl;
     saved_var_symtbl_b.clear();
     saved_const_symtbl_b.clear();
     saved_var_symtbl_b.push_back(*(new map<std::string, std::string>()));
@@ -224,11 +226,11 @@ public:
       array_dims = 0;
       constexpa -> Dump();
       string ref = "";
-      array_index[block_depth][lval] = *new vector<int>();
+      tmp_array_index[lval] = *new vector<int>();
       while(!imm_stack.empty() && array_dims--){
         std::cout << "in func param 3 safe1 : " << imm_stack.size()<<endl;
-        array_index[block_depth][lval].push_back(imm_stack.top());
-        if(array_index[block_depth][lval].size() == 1){
+        tmp_array_index[lval].push_back(imm_stack.top());
+        if(tmp_array_index[lval].size() == 1){
           ref = "[i32, " + to_string(imm_stack.top()) + "]";
         }
         else{
@@ -238,7 +240,7 @@ public:
         cur_num.pop();
       }
       // this means the first dimision of this array is not defined
-      array_index[block_depth][lval].push_back(-1);
+      tmp_array_index[lval].push_back(-1);
       ref = "*" + ref;
       koopa_string += "@" + ident + ": " + ref;
       func_var_array.push_back(ident);
@@ -252,9 +254,9 @@ public:
     if(type == 5 || type == 6){
       string lval = ident;
       string ref = "";
-      array_index[block_depth][lval] = *new vector<int>();
+      tmp_array_index[lval] = *new vector<int>();
       // this means the first dimision of this array is not defined
-      array_index[block_depth][lval].push_back(-1);
+      tmp_array_index[lval].push_back(-1);
       ref = "*i32";
       koopa_string += "@" + ident + ": " + ref ;
       func_var_array.push_back(ident);
@@ -319,8 +321,8 @@ public:
         string tmp2 = func_var_array_type.front();
         func_var_array_type.erase(func_var_array_type.begin());
         koopa_string += "  @" + tmp + "_" + to_string(block_depth) + " = alloc " + tmp2 + "\n  store @" + tmp + ", @" + tmp + "_" + to_string(block_depth) + "\n";
-        for(int i = 0 ; i < array_index[0][tmp].size(); i++){
-          array_index[block_depth][tmp].push_back(array_index[0][tmp][i]);
+        for(int i = 0 ; i < tmp_array_index[tmp].size(); i++){
+          array_index[block_depth][tmp].push_back(tmp_array_index[tmp][i]);
         }
       }
       std::cout << "in block" << endl;
@@ -358,10 +360,15 @@ public:
         string tmp2 = func_var_array_type.front();
         func_var_array_type.erase(func_var_array_type.begin());
         koopa_string += "  @" + tmp + "_" + to_string(block_depth) + " = alloc " + tmp2 + "\n  store @" + tmp + ", @" + tmp + "_" + to_string(block_depth) + "\n";
-        for(int i = 0 ; i < array_index[0][tmp].size(); i++){
-          array_index[block_depth][tmp].push_back(array_index[0][tmp][i]);
+        for(int i = 0 ; i < tmp_array_index[tmp].size(); i++){
+          array_index[block_depth][tmp].push_back(tmp_array_index[tmp][i]);
         }
       }
+      std::cout << "in block" << endl;
+      var_symtbl_b.pop_back();
+      const_symtbl_b.pop_back();
+      array_index.pop_back();
+      block_depth -= 1;
       std::cout << "in block" << endl;
     }
   }
@@ -550,6 +557,7 @@ public:
     }
     else if(type == 12){
       int cur_depth = 0;
+      std::cout << "in stmt 4 safe1 : " << block_depth << endl;
       for(int i = block_depth ; i >= 0 ; i --){
         if(!array_index[i][lval].empty()){
           cout<<"not empty :"<<i<<endl;
@@ -561,7 +569,8 @@ public:
       int save_array_dims = array_dims;
       array_dims = 0;
       expa->Dump();
-      std::cout << "in stmt 4 safe1 : " << ref_cnt << endl;
+      std::cout << "in stmt 4 safe1.0 : " << ref_cnt << endl;
+      std::cout << "in stmt 4 safe1.1 : " << cur_depth << endl;
       string ref = "";
       stack<int> get_ref;
       while(!cur_num.empty() && ref_cnt --){
@@ -578,6 +587,7 @@ public:
         }
       }
       if(array_index[cur_depth][lval][array_index[cur_depth][lval].size()-1] == -1){
+        cout<<"in stmt , going to usr get ptr,because array_index = " << array_index[cur_depth][lval][array_index[cur_depth][lval].size()-1] << endl;
         koopa_string += "  %" + to_string(exp_depth) + " = load @" + lval + "_" + to_string(cur_depth) + "\n";
         exp_depth += 1;
         if(get_ref.top() >=0){
@@ -1284,6 +1294,8 @@ public:
         if(array_index[depth3][lval][array_index[depth3][lval].size()-1] == -1){
           koopa_string += "  " + myexp + " = load @" + lval + "_" + to_string(depth3) + "\n";
           string nmyexp = "%" + to_string(exp_depth+1);
+          cout<<"in primary exp load , going to usr get ptr,because array_index = " << array_index[depth3][lval][array_index[depth3][lval].size()-1] << endl;
+
           koopa_string += "  " + nmyexp + " = getptr " + myexp + ", 0\n";
           exp_depth++;
         }
@@ -1367,6 +1379,7 @@ public:
         koopa_string += "  %" + to_string(exp_depth) + " = load @" + lval + "_" + to_string(cur_depth) + "\n";
         exp_depth += 1;
         if(get_ref.top() >=0){
+          cout<<"in primary exp ref , going to usr get ptr,because array_index = " << array_index[cur_depth][lval][array_index[cur_depth][lval].size()-1] << endl;
           koopa_string += "  %" + to_string(exp_depth) + " = getptr %" + to_string(exp_depth -1) + ", " + to_string(get_ref.top()) + "\n";
         }
         else{
