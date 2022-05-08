@@ -164,3 +164,21 @@ LOrExp      ::= LAndExp | LOrExp "||" LAndExp;
 
       koopa_string += "  " + myexp + " = ge " + exp1 + ", " + exp2 + "\n";
         
+
+
+
+ConstDef      ::= IDENT {"[" ConstExp "]"} "=" ConstInitVal;
+ConstInitVal  ::= ConstExp | "{" [ConstInitVal {"," ConstInitVal}] "}";
+VarDef        ::= IDENT {"[" ConstExp "]"}
+                | IDENT {"[" ConstExp "]"} "=" InitVal;
+InitVal       ::= Exp | "{" [InitVal {"," InitVal}] "}";
+
+LVal          ::= IDENT {"[" Exp "]"};
+
+ConstDef      ::= IDENT ["[" ConstExp "]"] "=" ConstInitVal;
+ConstInitVal  ::= ConstExp | "{" [ConstExp {"," ConstExp}] "}";
+VarDef        ::= IDENT ["[" ConstExp "]"]
+                | IDENT ["[" ConstExp "]"] "=" InitVal;
+InitVal       ::= Exp | "{" [Exp {"," Exp}] "}";
+
+LVal          ::= IDENT ["[" Exp "]"];

@@ -17,7 +17,7 @@ using namespace std;
 extern FILE *yyin;
 extern int yyparse(std::unique_ptr<BaseAST> &ast);
 
-char koopa_str[5000];
+string BaseAST::koopa_string="";
 
 int main(int argc, const char *argv[]) {
   // 解析命令行参数. 测试脚本/评测平台要求你的编译器能接收如下参数:
@@ -40,18 +40,18 @@ int main(int argc, const char *argv[]) {
   FILE * yyout ;
   yyout = fopen(output, "w");
   cout << 1 << endl;
-  ast->Dump(yyout, koopa_str);
+  ast->Dump();
   cout << 2 << endl;
   assert(!ret);
   cout << endl;
 
   if(strcmp(mode, "-koopa") == 0){
-    fprintf(yyout,"%s",koopa_str);
+    fprintf(yyout,"%s",ast->koopa_string.c_str());
   }
 
   // dump AST
   if(strcmp(mode, "-riscv") == 0){
-    deal_with_IR(koopa_str);
+    deal_with_IR(ast->koopa_string.c_str());
     fprintf(yyout,"%s",asm_out);
   }
   fclose(yyout);
