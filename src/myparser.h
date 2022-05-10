@@ -10,7 +10,7 @@
 #include <algorithm>
 #include "koopa.h"
 
-char asm_out[10000];
+char asm_out[10000000];
 
 stack<int> calstack;
 stack<int> immstack;
@@ -24,6 +24,8 @@ char params_regs[8][3] = {"a0","a1","a2","a3","a4","a5","a6","a7"};
 bool params_used[8] = {0,0,0,0,0,0,0};
 char us[7][3];
 map<std::string, int> alloc_pos;
+vector<int> tmp_array_size;
+map<std::string, vector<int> > alloc_size;
 int sp_max;
 int calls;
 int params;
@@ -62,16 +64,25 @@ void show_usable_regs(){
   cout<<endl;
 }
 void check_info(){
+  show_usable_regs();
   map<koopa_raw_value_t,int>::iterator it1;
   map<std::string, int>::iterator it2;
+  map<std::string, vector<int> >::iterator it3;
+  cout<<"bin stack"<<endl;
   for(it1 = saved_bin_stack.begin(); it1 != saved_bin_stack.end() ; it1++){
     cout<<it1->first<<" "<<it1->second<<endl;
   }
+  cout<<"alloc pos"<<endl;
   for(it2 = alloc_pos.begin(); it2 != alloc_pos.end() ; it2++){
     cout<<it2->first<<" "<<it2->second<<endl;
   }
+  cout<<"func"<<endl;
   for(int i = 0 ; i < funcalloc.size() ; i ++){
     cout<<funcalloc[i]<<endl;
+  }
+  cout<<"array"<<endl;
+  for(it3 = alloc_size.begin(); it3 != alloc_size.end() ; it3++){
+    cout<<it3->first<<" "<<it3->second.size()<<endl;
   }
 }
 
@@ -135,6 +146,16 @@ void Visit(const koopa_raw_slice_t &slice) {
         std::cout<<"in slice value"<<endl;
         // 访问指令
         Visit(reinterpret_cast<koopa_raw_value_t>(ptr));
+        if(galloc){
+          std::cout<<"in slice value galloc"<<endl;
+          if(!immstack.empty()){
+            int imm = immstack.top();
+            immstack.pop();
+            strcat(asm_out, "  .word ");
+            strcat(asm_out, to_string(imm).c_str());
+            strcat(asm_out, "\n");
+          }
+        }
         if(calls){
           std::cout<<"in slice value calls"<<endl;
           if(calstack.empty()){
@@ -142,7 +163,6 @@ void Visit(const koopa_raw_slice_t &slice) {
           }
           std::cout<<"stackok"<<endl;
           int reg = calstack.top();
-          used[reg] = 0;
           if(params < 8){
             strcat(asm_out, "  add a");
             strcat(asm_out, to_string(params).c_str());
@@ -153,13 +173,40 @@ void Visit(const koopa_raw_slice_t &slice) {
             params++;
           }
           else{
-            strcat(asm_out, "  sw t");
-            strcat(asm_out, to_string(calstack.top()).c_str());
-            strcat(asm_out, ", ");
-            strcat(asm_out, to_string(1024-4*(params-7)).c_str());
-            strcat(asm_out, "(sp)\n");
+            if(40000-4*(params-7) > 1024){
+              int spreg1 = 0;
+              for(int i = 0 ; i < 7 ; i ++){
+                if(!used[i]){spreg1 = i;break;}
+              }
+              strcat(asm_out, "  li t");
+              strcat(asm_out, to_string(spreg1).c_str());
+              strcat(asm_out, ", ");
+              strcat(asm_out, to_string(40000-4*(params-7)).c_str());
+              strcat(asm_out, "\n");
+
+              strcat(asm_out, "  add t");
+              strcat(asm_out, to_string(spreg1).c_str());
+              strcat(asm_out, ", sp, t");
+              strcat(asm_out, to_string(spreg1).c_str());
+              strcat(asm_out, "\n");
+
+              strcat(asm_out, "  sw t");
+              strcat(asm_out, to_string(calstack.top()).c_str());
+              strcat(asm_out, ", (t");
+              strcat(asm_out, to_string(spreg1).c_str());
+              strcat(asm_out, ")\n");
+            }
+            else{
+              strcat(asm_out, "  sw t");
+              strcat(asm_out, to_string(calstack.top()).c_str());
+              strcat(asm_out, ", ");
+              strcat(asm_out, to_string(40000-4*(params-7)).c_str());
+              strcat(asm_out, "(sp)\n");
+              
+            }
             params++;
           }
+          used[reg] = 0;
           calstack.pop();
         }
           std::cout<<"in slice value calls ends"<<endl;
@@ -187,7 +234,8 @@ void Visit(const koopa_raw_function_t &func) {
   strcat(asm_out, "\n");
   strcat(asm_out, func->name+1);
   strcat(asm_out,":\n");
-  strcat(asm_out, "  addi sp, sp, -1024\n");
+    strcat(asm_out, "  li t0, 40000\n");
+  strcat(asm_out, "  sub sp, sp, t0\n");
   strcat(asm_out, "  sw ra, 0(sp)\n");
   sp_max+=4;
   Visit(func->params);
@@ -203,8 +251,10 @@ void Visit(const koopa_raw_function_t &func) {
   }
   while(!funcalloc.empty()){
     alloc_pos.erase(funcalloc.back());
+    alloc_size.erase(funcalloc.back());
     funcalloc.pop_back();
   }
+  
   cout<<"func end, check info"<<endl;
   check_info();
 }
@@ -242,12 +292,38 @@ void Visit(const koopa_raw_value_t &value) {
               break;
           }
       }
-      strcat(asm_out, "  lw t");
-      strcat(asm_out, to_string(reg).c_str());
-      strcat(asm_out, ", ");
-      strcat(asm_out, to_string(saved_bin_stack[value]).c_str());
-      strcat(asm_out, "(sp)\n");
+      if(saved_bin_stack[value]>1024){
+        int spreg1 = 0;
+        for(int i = 0 ; i < 7 ; i ++){
+          if(!used[i]){spreg1 = i;break;}
+        }
+        strcat(asm_out, "  li t");
+        strcat(asm_out, to_string(spreg1).c_str());
+        strcat(asm_out, ", ");
+        strcat(asm_out, to_string(saved_bin_stack[value]).c_str());
+        strcat(asm_out, "\n");
+
+        strcat(asm_out, "  add t");
+        strcat(asm_out, to_string(spreg1).c_str());
+        strcat(asm_out, ", sp, t");
+        strcat(asm_out, to_string(spreg1).c_str());
+        strcat(asm_out, "\n");
+        
+        strcat(asm_out, "  lw t");
+        strcat(asm_out, to_string(reg).c_str());
+        strcat(asm_out, ", (t");
+        strcat(asm_out, to_string(spreg1).c_str());
+        strcat(asm_out, ")\n");
+      }
+      else{
+        strcat(asm_out, "  lw t");
+        strcat(asm_out, to_string(reg).c_str());
+        strcat(asm_out, ", ");
+        strcat(asm_out, to_string(saved_bin_stack[value]).c_str());
+        strcat(asm_out, "(sp)\n");
+      }
       calstack.push(reg);
+    cout<<"in value in stored has ended"<<endl;
   }
   else if(name != NULL && (alloc_pos.find(tmpstring) != alloc_pos.end())){
     cout<<"in value in stored varible"<<endl;
@@ -267,27 +343,86 @@ void Visit(const koopa_raw_value_t &value) {
               break;
           }
       }
+    int reg3 = 0;
+      for(int i = 0 ; i < 7 ; i++){
+          if(used[i] == 0){
+              used[i] = 1;
+              reg3 = i;
+              break;
+          }
+      }
       if(alloc_pos[name] >= 0){
-        strcat(asm_out, "  lw t");
-        strcat(asm_out, to_string(reg1).c_str());
-        strcat(asm_out, ", ");
-        strcat(asm_out, to_string(alloc_pos[name]).c_str());
-        strcat(asm_out, "(sp)\n");
+        if(alloc_pos[name] > 1024){
+          int spreg1 = 0;
+          for(int i = 0 ; i < 7 ; i ++){
+            if(!used[i]){spreg1 = i;break;}
+          }
+          strcat(asm_out, "  li t");
+          strcat(asm_out, to_string(spreg1).c_str());
+          strcat(asm_out, ", ");
+          strcat(asm_out, to_string(alloc_pos[name]).c_str());
+          strcat(asm_out, "\n");
+
+          strcat(asm_out, "  add t");
+          strcat(asm_out, to_string(spreg1).c_str());
+          strcat(asm_out, ", sp, t");
+          strcat(asm_out, to_string(spreg1).c_str());
+          strcat(asm_out, "\n");
+
+          strcat(asm_out, "  lw t");
+          strcat(asm_out, to_string(reg1).c_str());
+          strcat(asm_out, ", (t");
+          strcat(asm_out, to_string(spreg1).c_str());
+          strcat(asm_out, ")\n");
+        }
+        else{
+          strcat(asm_out, "  lw t");
+          strcat(asm_out, to_string(reg1).c_str());
+          strcat(asm_out, ", ");
+          strcat(asm_out, to_string(alloc_pos[name]).c_str());
+          strcat(asm_out, "(sp)\n");
+        }
       }
       else{
         strcat(asm_out, "  la t");
         strcat(asm_out, to_string(reg2).c_str());
         strcat(asm_out, ", var\n");
-        strcat(asm_out, "  lw t");
-        strcat(asm_out, to_string(reg1).c_str());
-        strcat(asm_out, ", ");
-        strcat(asm_out, to_string(-4-alloc_pos[name]).c_str());
-        strcat(asm_out, "(t");
-        strcat(asm_out, to_string(reg2).c_str());
-        strcat(asm_out, ")\n");
+
+        if(-4-alloc_pos[name] >= 1024){
+          strcat(asm_out, "  li t");
+          strcat(asm_out, to_string(reg3).c_str());
+          strcat(asm_out, ", ");
+          strcat(asm_out, to_string(-4-alloc_pos[name]).c_str());
+          strcat(asm_out, "\n");
+
+          strcat(asm_out, "  add t");
+          strcat(asm_out, to_string(reg2).c_str());
+          strcat(asm_out, ", t");
+          strcat(asm_out, to_string(reg2).c_str());
+          strcat(asm_out, ", t");
+          strcat(asm_out, to_string(reg3).c_str());
+          strcat(asm_out, "\n");
+          
+          strcat(asm_out, "  lw t");
+          strcat(asm_out, to_string(reg1).c_str());
+          strcat(asm_out, ", ");
+          strcat(asm_out, "(t");
+          strcat(asm_out, to_string(reg2).c_str());
+          strcat(asm_out, ")\n");
+        }
+        else{
+          strcat(asm_out, "  lw t");
+          strcat(asm_out, to_string(reg1).c_str());
+          strcat(asm_out, ", ");
+          strcat(asm_out, to_string(-4-alloc_pos[name]).c_str());
+          strcat(asm_out, "(t");
+          strcat(asm_out, to_string(reg2).c_str());
+          strcat(asm_out, ")\n");
+        }
 
       }
       used[reg2] = 0;
+      used[reg3] = 0;
       calstack.push(reg1);
   }
   else{
@@ -296,27 +431,58 @@ void Visit(const koopa_raw_value_t &value) {
     // 根据指令类型判断后续需要如何访问
     const auto &kind = value->kind;
     switch (kind.tag) {
-      case KOOPA_RVT_RETURN:
+      case KOOPA_RVT_RETURN:{
+        show_usable_regs();
         std::cout<<"in visit ret"<<endl;
         // 访问 return 指令
         Visit(kind.data.ret);
         break;
-      case KOOPA_RVT_INTEGER:
+      }
+      case KOOPA_RVT_INTEGER:{
+        show_usable_regs();
         std::cout<<"in visit int"<<endl;
         // 访问 integer 指令
         Visit(kind.data.integer);
         break;
-      case KOOPA_RVT_BINARY:
+      }
+      case KOOPA_RVT_BINARY:{
+        show_usable_regs();
         std::cout<<"in visit bin"<<endl;
         if(saved_bin_stack.find(value) == saved_bin_stack.end()){
           Visit(kind.data.binary);
           //strcat(asm_out, "  addi sp, sp, 4\n");
           saved_bin_stack[value] = sp_max;
-          strcat(asm_out, "  sw t");
-          strcat(asm_out, to_string(calstack.top()).c_str());
-          strcat(asm_out, ", ");
-          strcat(asm_out, to_string(saved_bin_stack[value]).c_str());
-          strcat(asm_out, "(sp)\n");
+          if(saved_bin_stack[value] > 1024){
+            int spreg1 = 0;
+            for(int i = 0 ; i < 7 ; i ++){
+              if(!used[i]){spreg1 = i;break;}
+            }
+            strcat(asm_out, "  li t");
+            strcat(asm_out, to_string(spreg1).c_str());
+            strcat(asm_out, ", ");
+            strcat(asm_out, to_string(saved_bin_stack[value]).c_str());
+            strcat(asm_out, "\n");
+
+            strcat(asm_out, "  add t");
+            strcat(asm_out, to_string(spreg1).c_str());
+            strcat(asm_out, ", sp, t");
+            strcat(asm_out, to_string(spreg1).c_str());
+            strcat(asm_out, "\n");
+        
+            strcat(asm_out, "  sw t");
+            strcat(asm_out, to_string(calstack.top()).c_str());
+            strcat(asm_out, ", (t");
+            strcat(asm_out, to_string(spreg1).c_str());
+            strcat(asm_out, ")\n");
+          }
+          else{
+            strcat(asm_out, "  sw t");
+            strcat(asm_out, to_string(calstack.top()).c_str());
+            strcat(asm_out, ", ");
+            strcat(asm_out, to_string(saved_bin_stack[value]).c_str());
+            strcat(asm_out, "(sp)\n");
+          }
+
           used[calstack.top()] = 0;
           calstack.pop();
           sp_max += 4;
@@ -330,21 +496,104 @@ void Visit(const koopa_raw_value_t &value) {
                     break;
                 }
             }
-            strcat(asm_out, "  lw t");
-            strcat(asm_out, to_string(reg).c_str());
-            strcat(asm_out, ", ");
-            strcat(asm_out, to_string(saved_bin_stack[value]).c_str());
-            strcat(asm_out, "(sp)\n");
+            if(saved_bin_stack[value]>1024){
+              int spreg1 = 0;
+              for(int i = 0 ; i < 7 ; i ++){
+                if(!used[i]){spreg1 = i;break;}
+              }
+              strcat(asm_out, "  li t");
+              strcat(asm_out, to_string(spreg1).c_str());
+              strcat(asm_out, ", ");
+              strcat(asm_out, to_string(saved_bin_stack[value]).c_str());
+              strcat(asm_out, "\n");
+
+              strcat(asm_out, "  add t");
+              strcat(asm_out, to_string(spreg1).c_str());
+              strcat(asm_out, ", sp, t");
+              strcat(asm_out, to_string(spreg1).c_str());
+              strcat(asm_out, "\n");
+
+              strcat(asm_out, "  lw t");
+              strcat(asm_out, to_string(reg).c_str());
+              strcat(asm_out, ", (t");
+              strcat(asm_out, to_string(spreg1).c_str());
+              strcat(asm_out, ")\n");
+            }
+            else{
+              strcat(asm_out, "  lw t");
+              strcat(asm_out, to_string(reg).c_str());
+              strcat(asm_out, ", ");
+              strcat(asm_out, to_string(saved_bin_stack[value]).c_str());
+              strcat(asm_out, "(sp)\n");
+            }
             calstack.push(reg);
         }
         break;
-      case KOOPA_RVT_STORE:
+      }
+      case KOOPA_RVT_STORE:{
+        show_usable_regs();
           std::cout<<"in visit store"<<endl;
           Visit(kind.data.store);
           break;
-      case KOOPA_RVT_ALLOC:
+      }
+      case KOOPA_RVT_ALLOC:{
+        show_usable_regs();
+          funcalloc.push_back(name);
           std::cout<<"in visit alloc"<<endl;
           //strcat(asm_out, "  addi sp, sp, 4\n");
+          if(value->ty->tag== KOOPA_RTT_ARRAY){
+            std::cout<<"in visit alloc array"<<endl;
+            cout << "this array has dim len " <<value->ty->data.array.len << endl;
+          }
+          if(value->ty->tag== KOOPA_RTT_INT32){
+            std::cout<<"in visit alloc int32"<<endl;
+          }
+          if(value->ty->tag== KOOPA_RTT_POINTER){
+            std::cout<<"in visit alloc pointer"<<endl;
+            std::cout<<"in visit alloc pointer : name is : "<< name << endl;
+            std::cout<<"pointer base : "<< (value->ty->data.pointer.base->tag == KOOPA_RTT_ARRAY )<< endl;
+            int ttl_size = 4;
+            auto base = value->ty->data.pointer.base;
+            if(base->tag == KOOPA_RTT_ARRAY){
+              alloc_size[name] = *new vector<int>();
+              std::cout<<"point - array : "<< name << endl;
+              while(base->tag == KOOPA_RTT_ARRAY){
+                alloc_size[name].push_back(base->data.array.len);
+                ttl_size *= base->data.array.len;
+                cout<<"str len: "<<base->data.array.len<<endl;
+                base = base->data.array.base;
+              }
+              alloc_pos[name] = sp_max;
+              sp_max += ttl_size;
+            }
+            if(base->tag == KOOPA_RTT_POINTER){
+              alloc_size[name] = *new vector<int>();
+              std::cout<<"pointer pointer base : "<< (base->data.pointer.base->tag == KOOPA_RTT_POINTER )<< endl;
+              std::cout<<"pointer array base : "<< (base->data.pointer.base->tag == KOOPA_RTT_ARRAY )<< endl;
+              std::cout<<"pointer i32 base : "<< (base->data.pointer.base->tag == KOOPA_RTT_INT32 )<< endl;
+              base = base->data.pointer.base;
+              alloc_size[name].push_back(-1);
+              while(base->tag == KOOPA_RTT_ARRAY){
+                std::cout<<"pointer and pointer and array : " << endl;
+                alloc_size[name].push_back(base->data.array.len);
+                cout<<"str len: "<<base->data.array.len<<endl;
+                base = base->data.array.base;
+              }
+              alloc_pos[name] = sp_max;
+              sp_max += ttl_size;
+            }
+            // i32
+            else if(base->tag == KOOPA_RTT_INT32){              
+              std::cout<<"i32 base : "<< endl;
+              std::string sname =  name;
+              if(alloc_pos.find(sname) == alloc_pos.end()){
+                  alloc_pos[sname] = sp_max;
+              }
+              // 访问 integer 指令
+              sp_max += 4;
+            }
+          }
+          /*
           if(name != NULL){
               std::string sname =  name;
               if(alloc_pos.find(sname) == alloc_pos.end()){
@@ -354,110 +603,830 @@ void Visit(const koopa_raw_value_t &value) {
               // 访问 integer 指令
               sp_max += 4;
           }
+          */
           break;
-      case KOOPA_RVT_GLOBAL_ALLOC: 
+      }
+      case KOOPA_RVT_GLOBAL_ALLOC: {
+        show_usable_regs();
         galloc = 1;
         zeroinit = 0;
         std::cout<<"in visit g-alloc"<<endl;
         if(gallocs == 0){
           strcat(asm_out, "  .data\n  .globl var\nvar:\n");
         }
-        cout<<value->name<<endl;
-        alloc_pos[value->name] = -(4*(1+gallocs++));
-        Visit(kind.data.global_alloc);
-        galloc = 0;
-        if(zeroinit)
-          strcat(asm_out, "  .zero 4\n");
-        else{
-          strcat(asm_out, "  .word ");
-          strcat(asm_out, to_string(immstack.top()).c_str());
-          immstack.pop();
-          strcat(asm_out, "\n");
+        if(value->ty->tag== KOOPA_RTT_POINTER){
+          std::cout<<"in visit galloc pointer"<<endl;
+          std::cout<<"in visit galloc pointer : name is : "<< name << endl;
+          std::cout<<"pointer base : "<< (value->ty->data.pointer.base->tag == KOOPA_RTT_ARRAY )<< endl;
+          int ttl_size = 4;
+          auto base = value->ty->data.pointer.base;
+          if(base->tag == KOOPA_RTT_ARRAY){
+            alloc_size[name] = *new vector<int>();
+            while(base->tag == KOOPA_RTT_ARRAY){
+              alloc_size[name].push_back(base->data.array.len);
+              ttl_size *= base->data.array.len;
+              cout<<"str len: "<<base->data.array.len<<endl;
+              base = base->data.array.base;
+            }
+              
+            alloc_pos[name] = -(4*(1+gallocs));
+            gallocs += ttl_size/4;
+            Visit(kind.data.global_alloc);
+            galloc = 0;
+            if(zeroinit){
+              strcat(asm_out, "  .zero ");
+              strcat(asm_out, to_string(ttl_size).c_str());
+              strcat(asm_out, "\n");
+            }
+          }
+          else if(base->tag == KOOPA_RTT_POINTER){
+            alloc_size[name] = *new vector<int>();
+            std::cout<<"pointer pointer base : "<< (value->ty->data.pointer.base->tag == KOOPA_RTT_ARRAY )<< endl;
+            auto base = value->ty->data.pointer.base;
+            alloc_size[name].push_back(-1);
+            while(base->tag == KOOPA_RTT_ARRAY){
+              alloc_size[name].push_back(base->data.array.len);
+              ttl_size *= base->data.array.len;
+              cout<<"str len: "<<base->data.array.len<<endl;
+              base = base->data.array.base;
+            }
+            alloc_pos[name] = -(4*(1+gallocs));
+            gallocs += ttl_size/4;
+            Visit(kind.data.global_alloc);
+            galloc = 0;
+            if(zeroinit){
+              strcat(asm_out, "  .zero ");
+              strcat(asm_out, to_string(ttl_size).c_str());
+              strcat(asm_out, "\n");
+            }
+          }
+          // i32
+          else if(base->tag == KOOPA_RTT_INT32){              
+            std::cout<<"g i32 base : "<< endl;
+            std::string sname =  name;
+            if(alloc_pos.find(sname) == alloc_pos.end()){
+                alloc_pos[sname] = -(4*(1+gallocs));;
+            }
+            Visit(kind.data.global_alloc);
+            galloc = 0;
+            // 访问 integer 指令
+            gallocs += 1;
+            if(zeroinit)
+              strcat(asm_out, "  .zero 4\n");
+            else{
+              strcat(asm_out, "  .word ");
+              strcat(asm_out, to_string(immstack.top()).c_str());
+              immstack.pop();
+              strcat(asm_out, "\n");
+            }
+          }
         }
         break;
+      }
       case KOOPA_RVT_LOAD:{
+        show_usable_regs();
           std::cout<<"in visit load"<<endl;
           Visit(kind.data.load);
           if(calstack.empty()){
             cout<<"empty error"<<endl;
           }
           int reg = calstack.top();
-          used[reg] = 0;
           calstack.pop();
           saved_bin_stack[value] = sp_max;
-          strcat(asm_out, "  sw t");
-          strcat(asm_out, to_string(reg).c_str());
-          strcat(asm_out, ", ");
-          strcat(asm_out, to_string(sp_max).c_str());
-          strcat(asm_out, "(sp)\n");
+          if(sp_max > 1024){
+            int spreg1 = 0;
+            for(int i = 0 ; i < 7 ; i ++){
+              if(!used[i]){spreg1 = i;break;}
+            }
+            strcat(asm_out, "  li t");
+            strcat(asm_out, to_string(spreg1).c_str());
+            strcat(asm_out, ", ");
+            strcat(asm_out, to_string(sp_max).c_str());
+            strcat(asm_out, "\n");
+
+            strcat(asm_out, "  add t");
+            strcat(asm_out, to_string(spreg1).c_str());
+            strcat(asm_out, ", sp, t");
+            strcat(asm_out, to_string(spreg1).c_str());
+            strcat(asm_out, "\n");
+
+            strcat(asm_out, "  sw t");
+            strcat(asm_out, to_string(reg).c_str());
+            strcat(asm_out, ", (t");
+            strcat(asm_out, to_string(spreg1).c_str());
+            strcat(asm_out, ")\n");
+          }
+          else{
+            strcat(asm_out, "  sw t");
+            strcat(asm_out, to_string(reg).c_str());
+            strcat(asm_out, ", ");
+            strcat(asm_out, to_string(sp_max).c_str());
+            strcat(asm_out, "(sp)\n");
+          }
+          used[reg] = 0;
           sp_max+=4;
           break;
       }
-      case KOOPA_RVT_BRANCH:
+      case KOOPA_RVT_BRANCH:{
           cout<<"in branch"<<endl;
           Visit(kind.data.branch);
           break;
-      case KOOPA_RVT_JUMP:
+      }
+      case KOOPA_RVT_JUMP:{
           cout<<"in jump"<<endl;  
           Visit(kind.data.jump);
           break;
-      case KOOPA_RVT_CALL:
+      }
+      case KOOPA_RVT_CALL:{
           Visit(kind.data.call);
           saved_bin_stack[value] = sp_max;
-          strcat(asm_out, "  sw t");
-          strcat(asm_out, to_string(calstack.top()).c_str());
-          strcat(asm_out, ", ");
-          strcat(asm_out, to_string(saved_bin_stack[value]).c_str());
-          strcat(asm_out, "(sp)\n");
+          if(saved_bin_stack[value] >1024){
+            int spreg1 = 0;
+            for(int i = 0 ; i < 7 ; i ++){
+              if(!used[i]){spreg1 = i;break;}
+            }
+            strcat(asm_out, "  li t");
+            strcat(asm_out, to_string(spreg1).c_str());
+            strcat(asm_out, ", ");
+            strcat(asm_out, to_string(saved_bin_stack[value]).c_str());
+            strcat(asm_out, "\n");
+
+            strcat(asm_out, "  add t");
+            strcat(asm_out, to_string(spreg1).c_str());
+            strcat(asm_out, ", sp, t");
+            strcat(asm_out, to_string(spreg1).c_str());
+            strcat(asm_out, "\n");
+
+            strcat(asm_out, "  sw t");
+            strcat(asm_out, to_string(calstack.top()).c_str());
+            strcat(asm_out, ", (t");
+            strcat(asm_out, to_string(spreg1).c_str());
+            strcat(asm_out, ")\n");
+          }
+          else{
+            strcat(asm_out, "  sw t");
+            strcat(asm_out, to_string(calstack.top()).c_str());
+            strcat(asm_out, ", ");
+            strcat(asm_out, to_string(saved_bin_stack[value]).c_str());
+            strcat(asm_out, "(sp)\n");
+          }
+
           used[calstack.top()] = 0;
           calstack.pop();
           sp_max += 4;
         break;
-      case KOOPA_RVT_FUNC_ARG_REF:
+      }
+      case KOOPA_RVT_FUNC_ARG_REF:{
+        show_usable_regs();
         cout<<"this name is "<<value->name<<endl;
         Visit(kind.data.func_arg_ref);
         if(kind.data.func_arg_ref.index < 8){
-          strcat(asm_out, "  sw a");
-          strcat(asm_out, to_string(kind.data.func_arg_ref.index).c_str());
-          strcat(asm_out, ", ");
-          strcat(asm_out, to_string(sp_max).c_str());
-          strcat(asm_out, "(sp)\n");
+          if(sp_max > 1024){
+            int spreg1 = 0;
+            for(int i = 0 ; i < 7 ; i ++){
+              if(!used[i]){spreg1 = i;break;}
+            }
+            strcat(asm_out, "  li t");
+            strcat(asm_out, to_string(spreg1).c_str());
+            strcat(asm_out, ", ");
+            strcat(asm_out, to_string(sp_max).c_str());
+            strcat(asm_out, "\n");
+
+            strcat(asm_out, "  add t");
+            strcat(asm_out, to_string(spreg1).c_str());
+            strcat(asm_out, ", sp, t");
+            strcat(asm_out, to_string(spreg1).c_str());
+            strcat(asm_out, "\n");
+
+            strcat(asm_out, "  sw a");
+            strcat(asm_out, to_string(kind.data.func_arg_ref.index).c_str());
+            strcat(asm_out, ", (t");
+            strcat(asm_out, to_string(spreg1).c_str());
+            strcat(asm_out, ")\n");
+          }
+          else{
+            strcat(asm_out, "  sw a");
+            strcat(asm_out, to_string(kind.data.func_arg_ref.index).c_str());
+            strcat(asm_out, ", ");
+            strcat(asm_out, to_string(sp_max).c_str());
+            strcat(asm_out, "(sp)\n");
+          }
           alloc_pos[value->name] = sp_max;
           sp_max += 4;
         }
         else{
           int tmp = 0;
           for(int i = 0; i < 7 ; i++){
-            if(used[i] == 0){tmp = i;break;}
+            if(used[i] == 0){tmp = i;used[i] = 1;break;}
           }
-          int tmpshift = 2048-4*(kind.data.func_arg_ref.index-7);
-          strcat(asm_out, "  lw t");
-          strcat(asm_out, to_string(tmp).c_str());
-          strcat(asm_out, ", ");
-          strcat(asm_out, to_string(tmpshift).c_str());
-          strcat(asm_out, "(sp)\n");
-          strcat(asm_out, "  sw t");
-          strcat(asm_out, to_string(tmp).c_str());
-          strcat(asm_out, ", ");
-          strcat(asm_out, to_string(sp_max).c_str());
-          strcat(asm_out, "(sp)\n");
+          int tmpshift = 80000-4*(kind.data.func_arg_ref.index-7);
+          if(tmpshift > 1024 || sp_max > 1024){
+            int spreg1 = 0;
+            for(int i = 0 ; i < 7 ; i ++){
+              if(!used[i]){spreg1 = i;break;}
+            }
+            strcat(asm_out, "  li t");
+            strcat(asm_out, to_string(spreg1).c_str());
+            strcat(asm_out, ", ");
+            strcat(asm_out, to_string(tmpshift).c_str());
+            strcat(asm_out, "\n");
+
+            strcat(asm_out, "  add t");
+            strcat(asm_out, to_string(spreg1).c_str());
+            strcat(asm_out, ", sp, t");
+            strcat(asm_out, to_string(spreg1).c_str());
+            strcat(asm_out, "\n");
+
+            strcat(asm_out, "  lw t");
+            strcat(asm_out, to_string(tmp).c_str());
+            strcat(asm_out, ", (t");
+            strcat(asm_out, to_string(spreg1).c_str());
+            strcat(asm_out, ")\n");
+
+            for(int i = 0 ; i < 7 ; i ++){
+              if(!used[i]){spreg1 = i;break;}
+            }
+            strcat(asm_out, "  li t");
+            strcat(asm_out, to_string(spreg1).c_str());
+            strcat(asm_out, ", ");
+            strcat(asm_out, to_string(sp_max).c_str());
+            strcat(asm_out, "\n");
+
+            strcat(asm_out, "  add t");
+            strcat(asm_out, to_string(spreg1).c_str());
+            strcat(asm_out, ", sp, t");
+            strcat(asm_out, to_string(spreg1).c_str());
+            strcat(asm_out, "\n");
+
+            strcat(asm_out, "  sw t");
+            strcat(asm_out, to_string(tmp).c_str());
+            strcat(asm_out, ", (t");
+            strcat(asm_out, to_string(spreg1).c_str());
+            strcat(asm_out, ")\n");
+          }
+          else{
+            strcat(asm_out, "  lw t");
+            strcat(asm_out, to_string(tmp).c_str());
+            strcat(asm_out, ", ");
+            strcat(asm_out, to_string(tmpshift).c_str());
+            strcat(asm_out, "(sp)\n");
+
+            strcat(asm_out, "  sw t");
+            strcat(asm_out, to_string(tmp).c_str());
+            strcat(asm_out, ", ");
+            strcat(asm_out, to_string(sp_max).c_str());
+            strcat(asm_out, "(sp)\n");
+          }
+          used[tmp] = 0;
           alloc_pos[value->name] = sp_max;
           sp_max += 4;
         }
         break;
-      case KOOPA_RVT_ZERO_INIT:
+      }
+      case KOOPA_RVT_ZERO_INIT:{
           cout<<"in zero init"<<endl;  
           zeroinit = 1;
           break;
-      default:
+      }
+      case KOOPA_RVT_GET_PTR:{
+        show_usable_regs();
+        cout<<"in get ptr"<<endl;  
+        vector<int> saved_vec = *new vector<int>();
+        string sname  = "";
+        if(value->kind.data.get_elem_ptr.src->name)
+          sname = value->kind.data.get_elem_ptr.src->name;
+        if(sname != ""){
+          cout<<"has name, this one is the first element of the array : "<<sname<<endl;
+          tmp_array_size = *new vector<int>();
+          int shift = 4;
+          for(int i = 1 ; i < alloc_size[sname].size(); i++){
+            shift *= alloc_size[sname][i];
+            tmp_array_size.push_back(alloc_size[sname][i]);
+          }
+          int tmp1 = 0;
+          for(int i = 0; i < 7 ; i++){
+            if(used[i] == 0){tmp1 = i;used[i] = 1;break;}
+          }
+          int tmp2 = 0;
+          for(int i = 0; i < 7 ; i++){
+            if(used[i] == 0){tmp2 = i;used[i] = 1;break;}
+          }
+          int tmp3 = 0;
+          for(int i = 0; i < 7 ; i++){
+            if(used[i] == 0){tmp3 = i;used[i] = 1;break;}
+          }
+          if(alloc_pos[sname] >= 0){
+            
+            if(alloc_pos[sname] >= 1024){
+              strcat(asm_out, "  li t");
+              strcat(asm_out, to_string(tmp3).c_str());
+              strcat(asm_out, ", ");                             
+              strcat(asm_out, to_string(alloc_pos[sname]).c_str());
+              strcat(asm_out, "\n");      
+
+              strcat(asm_out, "  add t");
+              strcat(asm_out, to_string(tmp1).c_str());
+              strcat(asm_out, ", sp, t");  
+              strcat(asm_out, to_string(tmp3).c_str());
+              strcat(asm_out, "\n");    
+            }
+            else{
+              strcat(asm_out, "  addi t");
+              strcat(asm_out, to_string(tmp1).c_str());
+              strcat(asm_out, ", sp, ");               
+              strcat(asm_out, to_string(alloc_pos[sname]).c_str());
+              strcat(asm_out, "\n");      
+
+            }                        
+
+            used[tmp3] = 0;
+
+            strcat(asm_out, "  li t");
+            strcat(asm_out, to_string(tmp2).c_str());
+            strcat(asm_out, ", "); 
+            strcat(asm_out, to_string(shift).c_str());
+            strcat(asm_out, "\n"); 
+          }
+          else{
+
+            strcat(asm_out, "  la t");
+            strcat(asm_out, to_string(tmp2).c_str());
+            strcat(asm_out, ", var\n"); 
+
+            if(-4-alloc_pos[sname] >= 1024){
+              strcat(asm_out, "  li t");
+              strcat(asm_out, to_string(tmp3).c_str());                
+              strcat(asm_out, ", ");                             
+              strcat(asm_out, to_string(-4-alloc_pos[sname]).c_str());  
+              strcat(asm_out, "\n"); 
+
+              strcat(asm_out, "  add t");
+              strcat(asm_out, to_string(tmp1).c_str());
+              strcat(asm_out, ", t");   
+              strcat(asm_out, to_string(tmp2).c_str());                   
+              strcat(asm_out, ", t");   
+              strcat(asm_out, to_string(tmp3).c_str());    
+              strcat(asm_out, "\n");   
+            }
+            else{
+              strcat(asm_out, "  addi t");
+              strcat(asm_out, to_string(tmp1).c_str());
+              strcat(asm_out, ", t");   
+              strcat(asm_out, to_string(tmp2).c_str());     
+              strcat(asm_out, ", ");                             
+              strcat(asm_out, to_string(-4-alloc_pos[sname]).c_str());  
+              strcat(asm_out, "\n"); 
+            }
+
+            used[tmp3] = 0;   
+
+            strcat(asm_out, "  li t");
+            strcat(asm_out, to_string(tmp2).c_str());
+            strcat(asm_out, ", "); 
+            strcat(asm_out, to_string(shift).c_str());
+            strcat(asm_out, "\n"); 
+
+          }
+          saved_vec = tmp_array_size;
+          Visit(value->kind.data.get_elem_ptr.index);
+          tmp_array_size = saved_vec;
+          // get ref
+          int ttype = calstack.top();
+          calstack.pop();
+
+          strcat(asm_out, "  mul t");
+          strcat(asm_out, to_string(tmp2).c_str());
+          strcat(asm_out, ", t"); 
+          strcat(asm_out, to_string(tmp2).c_str());
+          strcat(asm_out, ", t"); 
+          strcat(asm_out, to_string(ttype).c_str());
+          strcat(asm_out, "\n"); 
+
+          strcat(asm_out, "  add t");
+          strcat(asm_out, to_string(tmp1).c_str());
+          strcat(asm_out, ", t"); 
+          strcat(asm_out, to_string(tmp1).c_str());
+          strcat(asm_out, ", t"); 
+          strcat(asm_out, to_string(tmp2).c_str());
+          strcat(asm_out, "\n"); 
+          if(sp_max > 1024){
+            int spreg1 = 0;
+            for(int i = 0 ; i < 7 ; i ++){
+              if(!used[i]){spreg1 = i;break;}
+            }
+            used[tmp2] = 0;
+            used[ttype] = 0;
+            used[tmp1] = 0;
+            strcat(asm_out, "  li t");
+            strcat(asm_out, to_string(spreg1).c_str());
+            strcat(asm_out, ", ");
+            strcat(asm_out, to_string(sp_max).c_str());
+            strcat(asm_out, "\n");
+
+            strcat(asm_out, "  add t");
+            strcat(asm_out, to_string(spreg1).c_str());
+            strcat(asm_out, ", sp, t");
+            strcat(asm_out, to_string(spreg1).c_str());
+            strcat(asm_out, "\n");
+
+            strcat(asm_out, "  sw t");
+            strcat(asm_out, to_string(tmp1).c_str());
+            strcat(asm_out, ", (t");
+            strcat(asm_out, to_string(spreg1).c_str());
+            strcat(asm_out, ")\n");
+          }
+          else{
+            used[tmp2] = 0;
+            used[ttype] = 0;
+            used[tmp1] = 0;
+            strcat(asm_out, "  sw t");
+            strcat(asm_out, to_string(tmp1).c_str());
+            strcat(asm_out, ", ");
+            strcat(asm_out, to_string(sp_max).c_str());
+            strcat(asm_out, "(sp)\n");
+          }
+          check_info();
+          saved_bin_stack[value] = sp_max;
+          sp_max += 4;
+          cout<<"finish the first element of the array : "<<sname<<endl;
+        }
+        else{
+          check_info();
+          cout<<"this is not the beginning of the array"<<endl;  
+          Visit(value->kind.data.get_elem_ptr.src);
+          int ttype = calstack.top();
+          calstack.pop();
+          cout<<"finish checking ref, tmp array has size : "<< tmp_array_size.size() << endl;  
+          int shift = 4;
+          for(int i = 1 ; i < tmp_array_size.size(); i++){
+            shift *= tmp_array_size[i];
+          }
+          tmp_array_size.erase(tmp_array_size.begin());
+          int tmp1 = 0;
+          for(int i = 0; i < 7 ; i++){
+            if(used[i] == 0){tmp1 = i;used[i] = 1;break;}
+          }
+          int tmp2 = 0;
+          for(int i = 0; i < 7 ; i++){
+            if(used[i] == 0){tmp2 = i;used[i] = 1;break;}
+          }
+          strcat(asm_out, "  add t");
+          strcat(asm_out, to_string(tmp1).c_str());
+          strcat(asm_out, ", zero, t");                             
+          strcat(asm_out, to_string(ttype).c_str());
+          strcat(asm_out, "\n");                 
+          used[ttype] = 0;           
+
+          strcat(asm_out, "  li t");
+          strcat(asm_out, to_string(tmp2).c_str());
+          strcat(asm_out, ", "); 
+          strcat(asm_out, to_string(shift).c_str());
+          strcat(asm_out, "\n"); 
+          saved_vec = tmp_array_size;
+          cout<<"going to checking index"<<endl;  
+          Visit(value->kind.data.get_elem_ptr.index);
+          cout<<"finish checking index"<<endl;  
+          tmp_array_size = saved_vec;
+          // get ref
+          ttype = calstack.top();
+          calstack.pop();
+
+          strcat(asm_out, "  mul t");
+          strcat(asm_out, to_string(tmp2).c_str());
+          strcat(asm_out, ", t"); 
+          strcat(asm_out, to_string(tmp2).c_str());
+          strcat(asm_out, ", t"); 
+          strcat(asm_out, to_string(ttype).c_str());
+          strcat(asm_out, "\n"); 
+
+          strcat(asm_out, "  add t");
+          strcat(asm_out, to_string(tmp1).c_str());
+          strcat(asm_out, ", t"); 
+          strcat(asm_out, to_string(tmp1).c_str());
+          strcat(asm_out, ", t"); 
+          strcat(asm_out, to_string(tmp2).c_str());
+          strcat(asm_out, "\n"); 
+          if(sp_max > 1024){
+            int spreg1 = 0;
+            for(int i = 0 ; i < 7 ; i ++){
+              if(!used[i]){spreg1 = i;break;}
+            }
+            used[tmp2] = 0;
+            used[ttype] = 0;
+            used[tmp1] = 0;
+            strcat(asm_out, "  li t");
+            strcat(asm_out, to_string(spreg1).c_str());
+            strcat(asm_out, ", ");
+            strcat(asm_out, to_string(sp_max).c_str());
+            strcat(asm_out, "\n");
+
+            strcat(asm_out, "  add t");
+            strcat(asm_out, to_string(spreg1).c_str());
+            strcat(asm_out, ", sp, t");
+            strcat(asm_out, to_string(spreg1).c_str());
+            strcat(asm_out, "\n");
+
+            strcat(asm_out, "  sw t");
+            strcat(asm_out, to_string(tmp1).c_str());
+            strcat(asm_out, ", (t");
+            strcat(asm_out, to_string(spreg1).c_str());
+            strcat(asm_out, ")\n");
+          }
+          else{
+            used[tmp2] = 0;
+            used[ttype] = 0;
+            used[tmp1] = 0;
+            strcat(asm_out, "  sw t");
+            strcat(asm_out, to_string(tmp1).c_str());
+            strcat(asm_out, ", ");
+            strcat(asm_out, to_string(sp_max).c_str());
+            strcat(asm_out, "(sp)\n");
+          }
+          saved_bin_stack[value] = sp_max;
+          sp_max += 4;
+          cout<<"finish not the first element of the array : "<<sname<<endl;
+          // meet the end, push 
+        }
+        break;
+      }
+
+      case KOOPA_RVT_GET_ELEM_PTR:{
+        cout<<"in get elem ptr"<<endl;  
+        vector<int> saved_vec = *new vector<int>();
+        string sname  = "";
+        if(value->kind.data.get_elem_ptr.src->name)
+          sname = value->kind.data.get_elem_ptr.src->name;
+        if(sname != ""){
+          cout<<"has name, this one is the first element of the array : "<<sname<<endl;
+          tmp_array_size = *new vector<int>();
+          int shift = 4;
+          for(int i = 1 ; i < alloc_size[sname].size(); i++){
+            shift *= alloc_size[sname][i];
+            tmp_array_size.push_back(alloc_size[sname][i]);
+          }
+          int tmp1 = 0;
+          for(int i = 0; i < 7 ; i++){
+            if(used[i] == 0){tmp1 = i;used[i] = 1;break;}
+          }
+          int tmp2 = 0;
+          for(int i = 0; i < 7 ; i++){
+            if(used[i] == 0){tmp2 = i;used[i] = 1;break;}
+          }
+          int tmp3 = 0;
+          for(int i = 0; i < 7 ; i++){
+            if(used[i] == 0){tmp3 = i;used[i] = 1;break;}
+          }
+          if(alloc_pos[sname] >= 0){
+            if(alloc_pos[sname] >= 1024){
+              strcat(asm_out, "  li t");
+              strcat(asm_out, to_string(tmp3).c_str());
+              strcat(asm_out, ", ");                             
+              strcat(asm_out, to_string(alloc_pos[sname]).c_str());
+              strcat(asm_out, "\n");     
+
+              strcat(asm_out, "  add t");
+              strcat(asm_out, to_string(tmp1).c_str());
+              strcat(asm_out, ", sp, t");                             
+              strcat(asm_out, to_string(tmp3).c_str());
+              strcat(asm_out, "\n");      
+           
+            }
+            else{
+              strcat(asm_out, "  addi t");
+              strcat(asm_out, to_string(tmp1).c_str());
+              strcat(asm_out, ", sp,");                             
+              strcat(asm_out, to_string(alloc_pos[sname]).c_str());
+              strcat(asm_out, "\n");   
+            }         
+            used[tmp3] = 0;  
+
+            strcat(asm_out, "  li t");
+            strcat(asm_out, to_string(tmp2).c_str());
+            strcat(asm_out, ", "); 
+            strcat(asm_out, to_string(shift).c_str());
+            strcat(asm_out, "\n"); 
+          }
+          else{
+            strcat(asm_out, "  la t");
+            strcat(asm_out, to_string(tmp2).c_str());
+            strcat(asm_out, ", var\n"); 
+            if(-4-alloc_pos[sname] >= 1024){
+
+              strcat(asm_out, "  li t");
+              strcat(asm_out, to_string(tmp3).c_str());              
+              strcat(asm_out, ", ");                             
+              strcat(asm_out, to_string(-4-alloc_pos[sname]).c_str());  
+              strcat(asm_out, "\n");     
+
+              strcat(asm_out, "  add t");
+              strcat(asm_out, to_string(tmp1).c_str());
+              strcat(asm_out, ", t");   
+              strcat(asm_out, to_string(tmp2).c_str());                    
+              strcat(asm_out, ", t");                             
+              strcat(asm_out, to_string(tmp3).c_str());  
+              strcat(asm_out, "\n");    
+            }
+            else{
+              strcat(asm_out, "  addi t");
+              strcat(asm_out, to_string(tmp1).c_str());
+              strcat(asm_out, ", t");   
+              strcat(asm_out, to_string(tmp2).c_str());   
+              strcat(asm_out, ", ");                             
+              strcat(asm_out, to_string(-4-alloc_pos[sname]).c_str());  
+              strcat(asm_out, "\n");    
+            }  
+
+            used[tmp3] = 0;
+            
+            strcat(asm_out, "  li t");
+            strcat(asm_out, to_string(tmp2).c_str());
+            strcat(asm_out, ", "); 
+            strcat(asm_out, to_string(shift).c_str());
+            strcat(asm_out, "\n"); 
+          }
+          saved_vec = tmp_array_size;
+          Visit(value->kind.data.get_elem_ptr.index);
+          tmp_array_size = saved_vec;
+          // get ref
+          int ttype = calstack.top();
+          calstack.pop();
+
+          strcat(asm_out, "  mul t");
+          strcat(asm_out, to_string(tmp2).c_str());
+          strcat(asm_out, ", t"); 
+          strcat(asm_out, to_string(tmp2).c_str());
+          strcat(asm_out, ", t"); 
+          strcat(asm_out, to_string(ttype).c_str());
+          strcat(asm_out, "\n"); 
+
+          strcat(asm_out, "  add t");
+          strcat(asm_out, to_string(tmp1).c_str());
+          strcat(asm_out, ", t"); 
+          strcat(asm_out, to_string(tmp1).c_str());
+          strcat(asm_out, ", t"); 
+          strcat(asm_out, to_string(tmp2).c_str());
+          strcat(asm_out, "\n"); 
+          if(sp_max > 1024){
+            int spreg1 = 0;
+            for(int i = 0 ; i < 7 ; i ++){
+              if(!used[i]){spreg1 = i;break;}
+            }
+            strcat(asm_out, "  li t");
+            strcat(asm_out, to_string(spreg1).c_str());
+            strcat(asm_out, ", ");
+            strcat(asm_out, to_string(sp_max).c_str());
+            strcat(asm_out, "\n");
+
+            strcat(asm_out, "  add t");
+            strcat(asm_out, to_string(spreg1).c_str());
+            strcat(asm_out, ", sp, t");
+            strcat(asm_out, to_string(spreg1).c_str());
+            strcat(asm_out, "\n");
+
+            strcat(asm_out, "  sw t");
+            strcat(asm_out, to_string(tmp1).c_str());
+            strcat(asm_out, ", (t");
+            strcat(asm_out, to_string(spreg1).c_str());
+            strcat(asm_out, ")\n");
+          }
+          else{
+            strcat(asm_out, "  sw t");
+            strcat(asm_out, to_string(tmp1).c_str());
+            strcat(asm_out, ", ");
+            strcat(asm_out, to_string(sp_max).c_str());
+            strcat(asm_out, "(sp)\n");
+          }
+          used[tmp2] = 0;
+          used[ttype] = 0;
+          used[tmp1] = 0;
+          saved_bin_stack[value] = sp_max;
+          sp_max += 4;
+          cout<<"finish the first element of the array : "<<sname<<endl;
+        }
+        else{
+          cout<<"this is not the beginning of the array"<<endl;  
+          Visit(value->kind.data.get_elem_ptr.src);
+          cout<<"finish parsing src %"<<endl;  
+          int ttype = calstack.top();
+          calstack.pop();
+          int shift = 4;
+          cout<<"till now the array has size : "<<tmp_array_size.size()<<endl;  
+          for(int i = 1 ; i < tmp_array_size.size(); i++){
+            shift *= tmp_array_size[i];
+          }
+          tmp_array_size.erase(tmp_array_size.begin());
+          int tmp1 = 0;
+          for(int i = 0; i < 7 ; i++){
+            if(used[i] == 0){tmp1 = i;used[i] = 1;break;}
+          }
+          int tmp2 = 0;
+          for(int i = 0; i < 7 ; i++){
+            if(used[i] == 0){tmp2 = i;used[i] = 1;break;}
+          }
+          strcat(asm_out, "  add t");
+          strcat(asm_out, to_string(tmp1).c_str());
+          strcat(asm_out, ", zero, t");                             
+          strcat(asm_out, to_string(ttype).c_str());
+          strcat(asm_out, "\n");                 
+          used[ttype] = 0;           
+
+          strcat(asm_out, "  li t");
+          strcat(asm_out, to_string(tmp2).c_str());
+          strcat(asm_out, ", "); 
+          strcat(asm_out, to_string(shift).c_str());
+          strcat(asm_out, "\n"); 
+          saved_vec = tmp_array_size;
+          Visit(value->kind.data.get_elem_ptr.index);
+          cout<<"finish parsing index %"<<endl;  
+          tmp_array_size = saved_vec;
+          // get ref
+          ttype = calstack.top();
+          calstack.pop();
+
+          strcat(asm_out, "  mul t");
+          strcat(asm_out, to_string(tmp2).c_str());
+          strcat(asm_out, ", t"); 
+          strcat(asm_out, to_string(tmp2).c_str());
+          strcat(asm_out, ", t"); 
+          strcat(asm_out, to_string(ttype).c_str());
+          strcat(asm_out, "\n"); 
+
+          strcat(asm_out, "  add t");
+          strcat(asm_out, to_string(tmp1).c_str());
+          strcat(asm_out, ", t"); 
+          strcat(asm_out, to_string(tmp1).c_str());
+          strcat(asm_out, ", t"); 
+          strcat(asm_out, to_string(tmp2).c_str());
+          strcat(asm_out, "\n"); 
+          if(sp_max > 1024){
+            int spreg1 = 0;
+            for(int i = 0 ; i < 7 ; i ++){
+              if(!used[i]){spreg1 = i;break;}
+            }
+            strcat(asm_out, "  li t");
+            strcat(asm_out, to_string(spreg1).c_str());
+            strcat(asm_out, ", ");
+            strcat(asm_out, to_string(sp_max).c_str());
+            strcat(asm_out, "\n");
+
+            strcat(asm_out, "  add t");
+            strcat(asm_out, to_string(spreg1).c_str());
+            strcat(asm_out, ", sp, t");
+            strcat(asm_out, to_string(spreg1).c_str());
+            strcat(asm_out, "\n");
+
+            strcat(asm_out, "  sw t");
+            strcat(asm_out, to_string(tmp1).c_str());
+            strcat(asm_out, ", (t");
+            strcat(asm_out, to_string(spreg1).c_str());
+            strcat(asm_out, ")\n");
+          }
+          else{
+            strcat(asm_out, "  sw t");
+            strcat(asm_out, to_string(tmp1).c_str());
+            strcat(asm_out, ", ");
+            strcat(asm_out, to_string(sp_max).c_str());
+            strcat(asm_out, "(sp)\n");
+          }
+
+          used[tmp2] = 0;
+          used[ttype] = 0;
+          used[tmp1] = 0;
+          saved_bin_stack[value] = sp_max;
+          sp_max += 4;
+          cout<<"finish not the first element of the array : "<<sname<<endl;
+          // meet the end, push 
+        }
+        break;
+      }
+      
+      case KOOPA_RVT_UNDEF:{
+        show_usable_regs();
+        cout<<"in undef"<<endl;  
+        break;
+      }
+      case KOOPA_RVT_AGGREGATE:{
+        show_usable_regs();
+        cout<<"in agg"<<endl;  
+        Visit(kind.data.aggregate.elems);
+        break;
+      }
+      case KOOPA_RVT_BLOCK_ARG_REF:{
+        show_usable_regs();
+        cout<<"in block arg"<<endl;  
+        break;
+      }
+      default:{
         // 其他类型暂时遇不到
         assert(false);
+      }
     }
   }
 }
 
 
 void Visit(const koopa_raw_global_alloc_t &galloc){
+  cout<<"in galloc"<<endl;
   Visit(galloc.init);
 }
 
@@ -523,6 +1492,7 @@ void Visit(const koopa_raw_integer_t &intval){
     if(used[i] == 0){
       used[i] = 1;
       if(!galloc){
+        cout<<"this is not galloc"<<endl;
         strcat(asm_out,"  li t");
         strcat(asm_out,to_string(i).c_str());
         strcat(asm_out,", ");
@@ -530,7 +1500,11 @@ void Visit(const koopa_raw_integer_t &intval){
         strcat(asm_out, "\n");
         calstack.push(i);
       }
-      immstack.push(intval.value);
+      else{
+        used[i] = 0;
+        cout<<"this is galloc"<<endl;
+        immstack.push(intval.value);
+      }
       break;
     }
   }
@@ -548,12 +1522,14 @@ void Visit(const koopa_raw_return_t &ret){
     strcat(asm_out,"\n");
     used[p1] = 0;
     strcat(asm_out, "  lw ra, 0(sp)\n");
-    strcat(asm_out, "  addi sp, sp, 1024\n");
+    strcat(asm_out, "  li t0, 40000\n");
+    strcat(asm_out, "  add sp, sp, t0\n");
     strcat(asm_out,"  ret\n");
   }
   else{
     strcat(asm_out, "  lw ra, 0(sp)\n");
-    strcat(asm_out, "  addi sp, sp, 1024\n");
+    strcat(asm_out, "  li t0, 40000\n");
+    strcat(asm_out, "  add sp, sp, t0\n");
     strcat(asm_out,"  ret\n");
   }
 }
@@ -940,43 +1916,137 @@ void Visit(const koopa_raw_binary_op_t &op){
 }
 
 void Visit(const koopa_raw_store_t &store){
-    string sname = store.dest->name;
+    cout<<"in store  "<<endl;
+    string sname = "";
+    if(store.dest->name){
+      cout<<"in store name "<<endl;
+      sname = store.dest->name;
+      cout<<"store name is: "<<sname<<endl;
     
-    Visit(store.value);
-    int loadreg = calstack.top();
-    calstack.pop();
-    
-    int reg = 0;
-    for(int i = 0 ; i < 7 ; i ++){
-      if(used[i] == 0){
-        used[i] = 1;
-        reg = i;
-        break;
+      Visit(store.value);
+      int loadreg = calstack.top();
+      calstack.pop();
+      
+      int reg = 0;
+      for(int i = 0 ; i < 7 ; i ++){
+        if(used[i] == 0){
+          used[i] = 1;
+          reg = i;
+          break;
+        }
       }
-    }
+      int areg = 0;
+      for(int i = 0 ; i < 7 ; i ++){
+        if(used[i] == 0){
+          used[i] = 1;
+          areg = i;
+          break;
+        }
+      }
 
-    if(alloc_pos[sname] >= 0){
-      strcat(asm_out, "  sw t");
-      strcat(asm_out, to_string(loadreg).c_str());
-      strcat(asm_out, ", ");
-      strcat(asm_out, to_string(alloc_pos[sname]).c_str());
-      strcat(asm_out, "(sp)\n");
+      if(alloc_pos[sname] >= 0){
+        if(alloc_pos[sname] > 1024){
+          int spreg1 = 0;
+          for(int i = 0 ; i < 7 ; i ++){
+            if(!used[i]){spreg1 = i;break;}
+          }
+          strcat(asm_out, "  li t");
+          strcat(asm_out, to_string(spreg1).c_str());
+          strcat(asm_out, ", ");
+          strcat(asm_out, to_string(alloc_pos[sname]).c_str());
+          strcat(asm_out, "\n");
+
+          strcat(asm_out, "  add t");
+          strcat(asm_out, to_string(spreg1).c_str());
+          strcat(asm_out, ", sp, t");
+          strcat(asm_out, to_string(spreg1).c_str());
+          strcat(asm_out, "\n");
+
+          strcat(asm_out, "  sw t");
+          strcat(asm_out, to_string(loadreg).c_str());
+          strcat(asm_out, ", (t");
+          strcat(asm_out, to_string(spreg1).c_str());
+          strcat(asm_out, ")\n");
+        }
+        else{
+          strcat(asm_out, "  sw t");
+          strcat(asm_out, to_string(loadreg).c_str());
+          strcat(asm_out, ", ");
+          strcat(asm_out, to_string(alloc_pos[sname]).c_str());
+          strcat(asm_out, "(sp)\n");
+        }
+
+      }
+      else{
+        strcat(asm_out, "  la t");
+        strcat(asm_out, to_string(reg).c_str());
+        strcat(asm_out, ", var\n");
+        if(-4-alloc_pos[sname] < 1024){
+          strcat(asm_out, "  sw t");
+          strcat(asm_out, to_string(loadreg).c_str());
+          strcat(asm_out, ", ");
+          strcat(asm_out, to_string(-4-alloc_pos[sname]).c_str());
+          strcat(asm_out, "(t");
+          strcat(asm_out, to_string(reg).c_str());
+          strcat(asm_out, ")\n");
+        }
+        else{
+          strcat(asm_out, "  li t");
+          strcat(asm_out, to_string(areg).c_str());
+          strcat(asm_out, ", ");
+          strcat(asm_out, to_string(-4-alloc_pos[sname]).c_str());
+          strcat(asm_out, "\n");
+
+          strcat(asm_out, "  add t");
+          strcat(asm_out, to_string(reg).c_str());
+          strcat(asm_out, ", t");
+          strcat(asm_out, to_string(reg).c_str());
+          strcat(asm_out, ", t");
+          strcat(asm_out, to_string(areg).c_str());
+          strcat(asm_out, "\n");
+
+          strcat(asm_out, "  sw t");
+          strcat(asm_out, to_string(loadreg).c_str());
+          strcat(asm_out, ", ");
+          strcat(asm_out, "(t");
+          strcat(asm_out, to_string(reg).c_str());
+          strcat(asm_out, ")\n");
+        }
+      }
+      
+      used[reg] = 0;
+      used[areg] = 0;
+      used[loadreg] = 0;
     }
     else{
-      strcat(asm_out, "  la t");
-      strcat(asm_out, to_string(reg).c_str());
-      strcat(asm_out, ", var\n");
+      cout<<"in store no name "<<endl;
+      Visit(store.dest);
+      int destreg = calstack.top();
+      calstack.pop();
+
+      Visit(store.value);
+      int loadreg = calstack.top();
+      calstack.pop();
+      
+      int reg = 0;
+      for(int i = 0 ; i < 7 ; i ++){
+        if(used[i] == 0){
+          used[i] = 1;
+          reg = i;
+          break;
+        }
+      }
+
       strcat(asm_out, "  sw t");
       strcat(asm_out, to_string(loadreg).c_str());
-      strcat(asm_out, ", ");
-      strcat(asm_out, to_string(-4-alloc_pos[sname]).c_str());
-      strcat(asm_out, "(t");
-      strcat(asm_out, to_string(reg).c_str());
+      strcat(asm_out, ", (t");
+      strcat(asm_out, to_string(destreg).c_str());
       strcat(asm_out, ")\n");
+      
+      used[reg] = 0;
+      used[loadreg] = 0;
+      used[destreg] = 0;
     }
-    
-    used[reg] = 0;
-    used[loadreg] = 0;
 }
 
 void Visit(const koopa_raw_load_t &load){
@@ -998,29 +2068,126 @@ void Visit(const koopa_raw_load_t &load){
                 reg2 = i;break;
             }
         }
-    string sname = load.src->name;
-    cout<<"load name:"<<sname<<endl;
+    int reg3 = 0;
+        for(int i = 0 ; i < 7 ; i++){ 
+            //find aviliable reg
+            if(used[i] == 0){
+                used[i] = 1;
+                reg3 = i;break;
+            }
+        }
+    if(load.src->name){
+      string sname = load.src->name;
+      cout<<"load name:"<<sname<<endl;
 
-    if(alloc_pos[sname] >= 0){
-      strcat(asm_out, "  lw t");
-      strcat(asm_out, to_string(reg1).c_str());
-      strcat(asm_out, ", ");
-      strcat(asm_out, to_string(alloc_pos[sname]).c_str());
-      strcat(asm_out, "(sp)\n");
+      if(alloc_pos[sname] >= 0){
+        if(alloc_pos[sname] > 1024){
+          cout<<"loading saved pointer"<<endl;
+          if(alloc_size.find(sname) != alloc_size.end() && alloc_size[sname][0] == -1){
+            cout<<"loading saved pointer, in it, array has size : "<<alloc_size[sname].size()<<endl;
+            if(alloc_size[sname][0] == -1){
+              tmp_array_size = *new vector<int>();
+              for(int i = 0 ; i < alloc_size[sname].size(); i++){
+                tmp_array_size.push_back(alloc_size[sname][i]);
+              }
+              cout<<"why"<<endl;
+            }
+          }
+          int spreg1 = 0;
+          for(int i = 0 ; i < 7 ; i ++){
+            if(!used[i]){spreg1 = i;break;}
+          }
+          strcat(asm_out, "  li t");
+          strcat(asm_out, to_string(spreg1).c_str());
+          strcat(asm_out, ", ");
+          strcat(asm_out, to_string(alloc_pos[sname]).c_str());
+          strcat(asm_out, "\n");
+
+          strcat(asm_out, "  add t");
+          strcat(asm_out, to_string(spreg1).c_str());
+          strcat(asm_out, ", sp, t");
+          strcat(asm_out, to_string(spreg1).c_str());
+          strcat(asm_out, "\n");
+
+          strcat(asm_out, "  lw t");
+          strcat(asm_out, to_string(reg1).c_str());
+          strcat(asm_out, ", (t");
+          strcat(asm_out, to_string(spreg1).c_str());
+          strcat(asm_out, ")\n");
+        }
+        else{
+          if(alloc_size.find(sname) != alloc_size.end() && !(alloc_size[sname].size() == 0)){
+            cout<<"loading saved pointer, in it, array has size : "<<alloc_size[sname].size()<<endl;
+            if(alloc_size[sname][0] == -1){
+              tmp_array_size = *new vector<int>();
+              for(int i = 0 ; i < alloc_size[sname].size(); i++){
+                tmp_array_size.push_back(alloc_size[sname][i]);
+              }
+              cout<<"why"<<endl;
+            }
+          }
+          strcat(asm_out, "  lw t");
+          strcat(asm_out, to_string(reg1).c_str());
+          strcat(asm_out, ", ");
+          strcat(asm_out, to_string(alloc_pos[sname]).c_str());
+          strcat(asm_out, "(sp)\n");
+        }
+      }
+      else{
+        strcat(asm_out, "  la t");
+        strcat(asm_out, to_string(reg2).c_str());
+        strcat(asm_out, ", var\n");
+
+        if(-4-alloc_pos[sname] < 1024){
+          strcat(asm_out, "  lw t");
+          strcat(asm_out, to_string(reg1).c_str());
+          strcat(asm_out, ", ");
+          strcat(asm_out, to_string(-4-alloc_pos[sname]).c_str());
+          strcat(asm_out, "(t");
+          strcat(asm_out, to_string(reg2).c_str());
+          strcat(asm_out, ")\n");
+        }
+        else{
+          strcat(asm_out, "  li t");
+          strcat(asm_out, to_string(reg3).c_str());
+          strcat(asm_out, ", ");
+          strcat(asm_out, to_string(-4-alloc_pos[sname]).c_str());
+          strcat(asm_out, "\n");
+
+          strcat(asm_out, "  add t");
+          strcat(asm_out, to_string(reg2).c_str());
+          strcat(asm_out, ", t");
+          strcat(asm_out, to_string(reg2).c_str());
+          strcat(asm_out, ", t");
+          strcat(asm_out, to_string(reg3).c_str());
+          strcat(asm_out, "\n");
+          
+          strcat(asm_out, "  lw t");
+          strcat(asm_out, to_string(reg1).c_str());
+          strcat(asm_out, ", ");
+          strcat(asm_out, "(t");
+          strcat(asm_out, to_string(reg2).c_str());
+          strcat(asm_out, ")\n");
+        }
+      }
+      used[reg2] = 0;
+      calstack.push(reg1);
     }
     else{
-      strcat(asm_out, "  la t");
-      strcat(asm_out, to_string(reg2).c_str());
-      strcat(asm_out, ", var\n");
+      Visit(load.src);
+      int ttype = calstack.top();
+      calstack.pop();
+
       strcat(asm_out, "  lw t");
       strcat(asm_out, to_string(reg1).c_str());
-      strcat(asm_out, ", ");
-      strcat(asm_out, to_string(-4-alloc_pos[sname]).c_str());
-      strcat(asm_out, "(t");
-      strcat(asm_out, to_string(reg2).c_str());
+      strcat(asm_out, ", (t");
+      strcat(asm_out, to_string(ttype).c_str());
       strcat(asm_out, ")\n");
+
+      used[ttype] = 0;
+      used[reg2] = 0;
+      calstack.push(reg1);
     }
-    used[reg2] = 0;
-    calstack.push(reg1);
+    used[reg3] = 0;
     
 }

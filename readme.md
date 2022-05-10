@@ -170,10 +170,10 @@ LOrExp      ::= LAndExp | LOrExp "||" LAndExp;
 ConstDef      ::= IDENT {"[" ConstExp "]"} "=" ConstInitVal;
 ConstInitVal  ::= ConstExp | "{" [ConstInitVal {"," ConstInitVal}] "}";
 VarDef        ::= IDENT {"[" ConstExp "]"}
-                | IDENT {"[" ConstExp "]"} "=" InitVal;
-InitVal       ::= Exp | "{" [InitVal {"," InitVal}] "}";
+                | IDENT {"[" ConstExp "]"} "=" InitVal; ok
+InitVal       ::= Exp | "{" [InitVal {"," InitVal}] "}"; 
 
-LVal          ::= IDENT {"[" Exp "]"};
+LVal          ::= IDENT {"[" Exp "]"}; ok
 
 ConstDef      ::= IDENT ["[" ConstExp "]"] "=" ConstInitVal;
 ConstInitVal  ::= ConstExp | "{" [ConstExp {"," ConstExp}] "}";
