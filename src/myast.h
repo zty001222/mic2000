@@ -135,6 +135,8 @@ public:
 
   void Dump() const override
   {
+
+    terminated.push_back(0);
     cout<<"in func def : "<<array_index.size()<<endl;
     saved_var_symtbl_b.clear();
     saved_const_symtbl_b.clear();
@@ -193,6 +195,7 @@ public:
       }
       koopa_string += "}\n";
     }
+    terminated.pop_back();
   }
 };
 
@@ -293,8 +296,11 @@ public:
   int type;
   void Dump() const override
   {
+    cout<<"in block, check terminated:"<<endl;
+    for(int i = 0 ; i < terminated.size(); i ++){
+      cout<<"  i: "<<terminated[i]<<endl;
+    }
     if(type == 1){
-      terminated.push_back(0);
       var_symtbl_b.push_back(*(new map<std::string, std::string>()));
       const_symtbl_b.push_back(*(new map<std::string, std::string>()));
       saved_var_symtbl_b.push_back(*(new map<std::string, std::string>()));
@@ -333,7 +339,6 @@ public:
       block_depth -= 1;
     }
     else{
-      terminated.push_back(0);
       var_symtbl_b.push_back(*(new map<std::string, std::string>()));
       const_symtbl_b.push_back(*(new map<std::string, std::string>()));
       saved_var_symtbl_b.push_back(*(new map<std::string, std::string>()));
@@ -370,6 +375,10 @@ public:
       array_index.pop_back();
       block_depth -= 1;
       std::cout << "in block" << endl;
+    }
+    cout<<"out of block, check terminated:"<<endl;
+    for(int i = 0 ; i < terminated.size(); i ++){
+      cout<<"  i: "<<terminated[i]<<endl;
     }
   }
 };
