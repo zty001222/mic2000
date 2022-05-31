@@ -17,6 +17,7 @@ using namespace std;
 
 static stack<int> cur_num;
 static stack<int> imm_stack;
+static stack<int> if_stack;
 static map<std::string, std::string> const_symtbl;
 static map<std::string, std::string> var_symtbl;
 static vector<string> func_var;
@@ -34,6 +35,8 @@ static map<std::string, int> quick_ret;
 static std::string cur_func;
 static std::string cur_array;
 static int rparam;
+static int bool_res_cnt;
+static int cur_while_cnt;
 static int array_dims;
 static int align_depth;
 static int cur_total_num;
@@ -501,6 +504,9 @@ public:
       koopa_string += "%end" + to_string(thiscnt) + ":\n";
     }
     else if(type == 8){
+      if_stack.push(ifcnt);
+      if_stack.push(elsecnt);
+      if_stack.push(2);
       exp -> Dump();
       int ttype = cur_num.top();
       cur_num.pop();
@@ -535,6 +541,8 @@ public:
       whilecnt += 1;
       koopa_string += "  jump %while_entry" + to_string(thiscnt) + "\n";
       koopa_string += "%while_entry" + to_string(thiscnt) + ":\n";
+      if_stack.push(whilecnt);
+      if_stack.push(3);
       exp -> Dump();
       //refresh cur while loop
       int ttype = cur_num.top();
@@ -668,66 +676,42 @@ public:
     }
     if (type != 1)
     {
-      lorexp->Dump();
-      int ttype1;
-      int ttype2;
-      string exp1;
-      string exp2;
-      ttype1 = cur_num.top();
+      lorexp -> Dump();
+      int ttype = cur_num.top();
       cur_num.pop();
-      if(ttype1 == -1){
-        int tmptop = imm_stack.top();
-        if(tmptop == 1){
-          imm_stack.pop();
-          cur_num.push(-1);
-          imm_stack.push(1);
-          return;
-        }
-      }
-      landexp->Dump();
-      ttype2 = cur_num.top();
-      cur_num.pop();
-      if(ttype1 == -1 && ttype2 == -1){
-        int var1 = imm_stack.top();
+      int thiscnt = ifcnt;
+      ifcnt += 1;
+      int thisboolcnt = bool_res_cnt;
+      bool_res_cnt += 1;
+      koopa_string += "  @bool_res_0_" + to_string(thisboolcnt) + " = alloc i32\n";
+      koopa_string += "  store 1, @bool_res_0_" + to_string(thisboolcnt) +"\n";
+      if(ttype == -1){
+        koopa_string += "  %" + to_string(exp_depth) + " = eq 0, " + to_string(imm_stack.top()) + "\n";
         imm_stack.pop();
-        int var2 = imm_stack.top();
-        imm_stack.pop();
-        cur_num.push(-1);
-        imm_stack.push(var1||var2);
       }
       else{
-        if (ttype1 == -1)
-        {
-          exp1 = to_string(imm_stack.top());
-          imm_stack.pop();
-        }
-        else
-        {
-          exp1 = "%" + to_string(ttype1);
-        }
-        if (ttype2 == -1)
-        {
-          exp2 = to_string(imm_stack.top());
-          imm_stack.pop();
-        }
-        else
-        {
-          exp2 = "%" +  to_string(ttype2);
-        }
-        string myexp1;
-        myexp1 = "%" + to_string(exp_depth);
-        exp_depth += 1;
-        string myexp2;
-        myexp2 = "%" + to_string(exp_depth);
-        exp_depth += 1;
-        string myexp3;
-        myexp3 = "%" + to_string(exp_depth);
-        exp_depth += 1;
-        koopa_string += "  " + myexp1 + " = ne 0, " + exp1 + "\n";
-        koopa_string += "  " + myexp2 + " = ne 0, " + exp2 + "\n";
-        koopa_string += "  " + myexp3 + " = or " + myexp1 + ", " + myexp2 + "\n";
-        cur_num.push(exp_depth - 1);
+        koopa_string += "  %" + to_string(exp_depth) + " = eq 0, %" + to_string(ttype) + "\n";
       }
+      koopa_string += "  br %" + to_string(exp_depth) + ", %then" + to_string(thiscnt) + ", %end" + to_string(thiscnt) + "\n";
+      exp_depth += 1;
+      koopa_string += "%then" + to_string(thiscnt) + ":\n";
+      landexp -> Dump();
+      int ttype2 = cur_num.top();
+      cur_num.pop();
+      if(ttype2 == -1){
+        koopa_string += "  %" + to_string(exp_depth) + " = ne 0, " + to_string(imm_stack.top()) + "\n";
+        imm_stack.pop();
+      }
+      else{
+        koopa_string += "  %" + to_string(exp_depth) + " = ne 0, %" + to_string(ttype2) + "\n";
+      }
+      koopa_string += "  store %" + to_string(exp_depth) + ", @bool_res_0_" + to_string(thisboolcnt) +"\n";
+      exp_depth += 1;
+      koopa_string += "  jump %end" + to_string(thiscnt) + "\n";
+      koopa_string += "%end" + to_string(thiscnt) + ":\n";
+      koopa_string += "  %" + to_string(exp_depth) + " = load @bool_res_0_" + to_string(thisboolcnt) +"\n";
+      exp_depth += 1;
+      cur_num.push(exp_depth - 1);
     }
   }
 };
@@ -747,67 +731,42 @@ public:
     }
     if (type != 1)
     {
-      landexp->Dump();
-      int ttype1;
-      int ttype2;
-      string exp1;
-      string exp2;
-      ttype1 = cur_num.top();
+      landexp -> Dump();
+      int ttype = cur_num.top();
       cur_num.pop();
-      if(ttype1 == -1){
-        int tmptop = imm_stack.top();
-        if(tmptop == 0){
-          imm_stack.pop();
-          cur_num.push(-1);
-          imm_stack.push(0);
-          return;
-        }
-      }
-      eqexp->Dump();
-      ttype2 = cur_num.top();
-      cur_num.pop();
-      if(ttype1 == -1 && ttype2 == -1){
-        int var1 = imm_stack.top();
+      int thiscnt = ifcnt;
+      ifcnt += 1;
+      int thisboolcnt = bool_res_cnt;
+      bool_res_cnt += 1;
+      koopa_string += "  @bool_res_0_" + to_string(thisboolcnt) + " = alloc i32\n";
+      koopa_string += "  store 0, @bool_res_0_" + to_string(thisboolcnt) +"\n";
+      if(ttype == -1){
+        koopa_string += "  %" + to_string(exp_depth) + " = ne 0, " + to_string(imm_stack.top()) + "\n";
         imm_stack.pop();
-        int var2 = imm_stack.top();
-        imm_stack.pop();
-        cur_num.push(-1);
-        imm_stack.push(var1&&var2);
       }
       else{
-        if (ttype1 == -1)
-        {
-          exp1 = to_string(imm_stack.top());
-          imm_stack.pop();
-        }
-        else
-        {
-          exp1 = "%" + to_string(ttype1);
-        }
-        if (ttype2 == -1)
-        {
-          exp2 = to_string(imm_stack.top());
-          imm_stack.pop();
-        }
-        else
-        {
-          exp2 = "%" + to_string(ttype2);
-        }
-        
-        string myexp1;
-        myexp1 = "%" + to_string(exp_depth);
-        exp_depth += 1;
-        string myexp2;
-        myexp2 = "%" + to_string(exp_depth);
-        exp_depth += 1;
-        string myexp3;
-        myexp3 = "%" + to_string(exp_depth);
-        exp_depth += 1;
-        koopa_string += "  " + myexp1 + " = ne 0, " + exp1 + "\n";
-        koopa_string += "  " + myexp2 + " = ne 0, " + exp2 + "\n";
-        koopa_string += "  " + myexp3 + " = and " + myexp1 + ", " + myexp2 + "\n";
-        cur_num.push(exp_depth - 1);
+        koopa_string += "  %" + to_string(exp_depth) + " = ne 0, %" + to_string(ttype) + "\n";
       }
+      koopa_string += "  br %" + to_string(exp_depth) + ", %then" + to_string(thiscnt) + ", %end" + to_string(thiscnt) + "\n";
+      exp_depth += 1;
+      koopa_string += "%then" + to_string(thiscnt) + ":\n";
+      eqexp -> Dump();
+      int ttype2 = cur_num.top();
+      cur_num.pop();
+      if(ttype2 == -1){
+        koopa_string += "  %" + to_string(exp_depth) + " = ne 0, " + to_string(imm_stack.top()) + "\n";
+        imm_stack.pop();
+      }
+      else{
+        koopa_string += "  %" + to_string(exp_depth) + " = ne 0, %" + to_string(ttype2) + "\n";
+      }
+      koopa_string += "  store %" + to_string(exp_depth) + ", @bool_res_0_" + to_string(thisboolcnt) +"\n";
+      exp_depth += 1;
+      koopa_string += "  jump %end" + to_string(thiscnt) + "\n";
+      koopa_string += "%end" + to_string(thiscnt) + ":\n";
+      koopa_string += "  %" + to_string(exp_depth) + " = load @bool_res_0_" + to_string(thisboolcnt) +"\n";
+      exp_depth += 1;
+      cur_num.push(exp_depth - 1);
     }
   }
 };
@@ -951,8 +910,11 @@ public:
     }
     if (type != 1)
     {
+      std::cout << "add going to parse" << endl;
       addexp->Dump();
+      std::cout << "add parsed add" << endl;
       mulexp->Dump();
+      std::cout << "add parsed mul" << endl;
       int ttype1;
       int ttype2;
       string exp1;
