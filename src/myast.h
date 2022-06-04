@@ -786,6 +786,7 @@ public:
     }
     if (type != 1)
     {
+      relexp->Dump();
       eqexp->Dump();
       int ttype;
       string exp1;
@@ -801,7 +802,6 @@ public:
       {
         exp1 = "%" + to_string(ttype);
       }
-      relexp->Dump();
       ttype = cur_num.top();
       cur_num.pop();
       if (ttype == -1)
@@ -1133,10 +1133,6 @@ public:
       std::cout << "in unary6" << endl;
       param_list.push_back(*new vector<string>());
       rparams -> Dump();
-      if(quick_ret[ident] != -114514){
-        cur_num.push(-1);
-        imm_stack.push(quick_ret[ident]);
-      } 
       if(func_tbl[ident] == "int"){
         koopa_string += "  %" + to_string(exp_depth) + " = call @" + ident + "(";
         cur_num.push(exp_depth);
