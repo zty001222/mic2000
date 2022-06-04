@@ -10,7 +10,7 @@
 #include <algorithm>
 #include "koopa.h"
 
-char asm_out[10000000];
+char asm_out[100000000];
 
 stack<int> calstack;
 stack<int> immstack;
@@ -173,7 +173,7 @@ void Visit(const koopa_raw_slice_t &slice) {
             params++;
           }
           else{
-            if(40000-4*(params-7) > 1024){
+            if(200000-4*(params-7) > 1024){
               int spreg1 = 0;
               for(int i = 0 ; i < 7 ; i ++){
                 if(!used[i]){spreg1 = i;break;}
@@ -181,7 +181,7 @@ void Visit(const koopa_raw_slice_t &slice) {
               strcat(asm_out, "  li t");
               strcat(asm_out, to_string(spreg1).c_str());
               strcat(asm_out, ", ");
-              strcat(asm_out, to_string(40000-4*(params-7)).c_str());
+              strcat(asm_out, to_string(200000-4*(params-7)).c_str());
               strcat(asm_out, "\n");
 
               strcat(asm_out, "  add t");
@@ -200,7 +200,7 @@ void Visit(const koopa_raw_slice_t &slice) {
               strcat(asm_out, "  sw t");
               strcat(asm_out, to_string(calstack.top()).c_str());
               strcat(asm_out, ", ");
-              strcat(asm_out, to_string(40000-4*(params-7)).c_str());
+              strcat(asm_out, to_string(200000-4*(params-7)).c_str());
               strcat(asm_out, "(sp)\n");
               
             }
@@ -234,7 +234,7 @@ void Visit(const koopa_raw_function_t &func) {
   strcat(asm_out, "\n");
   strcat(asm_out, func->name+1);
   strcat(asm_out,":\n");
-    strcat(asm_out, "  li t0, 40000\n");
+    strcat(asm_out, "  li t0, 200000\n");
   strcat(asm_out, "  sub sp, sp, t0\n");
   strcat(asm_out, "  sw ra, 0(sp)\n");
   sp_max+=4;
@@ -819,7 +819,7 @@ void Visit(const koopa_raw_value_t &value) {
           for(int i = 0; i < 7 ; i++){
             if(used[i] == 0){tmp = i;used[i] = 1;break;}
           }
-          int tmpshift = 80000-4*(kind.data.func_arg_ref.index-7);
+          int tmpshift = 400000-4*(kind.data.func_arg_ref.index-7);
           if(tmpshift > 1024 || sp_max > 1024){
             int spreg1 = 0;
             for(int i = 0 ; i < 7 ; i ++){
@@ -1522,13 +1522,13 @@ void Visit(const koopa_raw_return_t &ret){
     strcat(asm_out,"\n");
     used[p1] = 0;
     strcat(asm_out, "  lw ra, 0(sp)\n");
-    strcat(asm_out, "  li t0, 40000\n");
+    strcat(asm_out, "  li t0, 200000\n");
     strcat(asm_out, "  add sp, sp, t0\n");
     strcat(asm_out,"  ret\n");
   }
   else{
     strcat(asm_out, "  lw ra, 0(sp)\n");
-    strcat(asm_out, "  li t0, 40000\n");
+    strcat(asm_out, "  li t0, 200000\n");
     strcat(asm_out, "  add sp, sp, t0\n");
     strcat(asm_out,"  ret\n");
   }
