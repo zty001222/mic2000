@@ -786,7 +786,6 @@ public:
     }
     if (type != 1)
     {
-      relexp->Dump();
       eqexp->Dump();
       int ttype;
       string exp1;
@@ -802,6 +801,7 @@ public:
       {
         exp1 = "%" + to_string(ttype);
       }
+      relexp->Dump();
       ttype = cur_num.top();
       cur_num.pop();
       if (ttype == -1)
