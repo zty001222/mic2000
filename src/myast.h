@@ -1634,6 +1634,7 @@ public:
       }
       need_to_fill += cur_total_num;
       constexpb -> Dump();
+      align_depth -= 1;
     }
     if(type == 3){
       std::cout << "in type empty {}" << endl;
@@ -1719,6 +1720,7 @@ public:
           std::cout << "    step3 : need_to_fill: " <<need_to_fill << "; cur_total_num : " <<cur_total_num << endl;
         }
       }
+      align_depth -= 1;
     }
   }
 };
@@ -2202,17 +2204,19 @@ public:
       for(int i = 0 ; i < ttldepth ; i ++){
         cout<<array_index[block_depth][cur_array][i]<<endl;
       }
+      cout<< " this array start from depth : "<< ttldepth << endl;
       while(tmp % array_index[block_depth][cur_array][this_block_depth] == 0){
         need_to_fill *= array_index[block_depth][cur_array][this_block_depth];
         tmp = tmp / array_index[block_depth][cur_array][this_block_depth];
         this_block_depth ++;
         if(this_block_depth >= ttldepth){
-          cout<<"this block need to fill in full array"<<endl;
+          cout<<"this block need to fill in full array : "<<  endl;
           break;
         } 
       }
       need_to_fill += cur_total_num;
       expb -> Dump();
+      align_depth -= 1;
     }
     if(type == 3){
       std::cout << "in type empty {}" << endl;
@@ -2297,6 +2301,7 @@ public:
           std::cout << "    step3 : need_to_fill: " <<need_to_fill << "; cur_total_num : " <<cur_total_num << endl;
         }
       }
+      align_depth -= 1;
     }
   }
 };
