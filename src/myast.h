@@ -1117,23 +1117,16 @@ public:
     }
     if(type == 5){
       std::cout << "in unary5" << endl;
-      if(quick_ret[ident] != -114514){
-        cur_num.push(-1);
-        imm_stack.push(quick_ret[ident]);
-        koopa_string += "  call @" + ident + "()\n";
-      } 
+      if(func_tbl[ident] == "int"){
+        koopa_string += "  %" + to_string(exp_depth) + " = call @" + ident + "()\n";
+        cur_num.push(exp_depth);
+        exp_depth += 1;
+      }
       else{
-        if(func_tbl[ident] == "int"){
-          koopa_string += "  %" + to_string(exp_depth) + " = call @" + ident + "()\n";
-          cur_num.push(exp_depth);
-          exp_depth += 1;
-        }
-        else{
-          // not defined
-          koopa_string += "  call @" + ident + "()\n";
-          cur_num.push(-1);
-          imm_stack.push(1);
-        }
+        // not defined
+        koopa_string += "  call @" + ident + "()\n";
+        cur_num.push(-1);
+        imm_stack.push(1);
       }
     }
     if(type == 6){
