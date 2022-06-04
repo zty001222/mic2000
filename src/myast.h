@@ -155,7 +155,7 @@ public:
       cout<<2<<endl;
       block->Dump();
       if(!terminated.back()){
-        koopa_string += "  ret\n";
+        koopa_string += "  ret 0\n";
       }
       koopa_string += "}\n";
     }
@@ -168,7 +168,7 @@ public:
       cout<<2<<endl;
       block->Dump();
       if(!terminated.back()){
-        koopa_string += "  ret\n";
+        koopa_string += "  ret 0\n";
       }
       koopa_string += "}\n";
     }
