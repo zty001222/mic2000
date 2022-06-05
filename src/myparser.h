@@ -16,6 +16,10 @@ stack<int> calstack;
 stack<int> immstack;
 map<koopa_raw_value_t,int> saved_bin;
 map<koopa_raw_value_t,int> saved_bin_stack;
+map<string, int>tag_location;
+int dpt = 0;
+int tmpbj = 0;
+string qcur_func;
 
 
 char regs[7][3] = {"t0","t1","t2","t3","t4","t5","t6"};
@@ -83,6 +87,10 @@ void check_info(){
   cout<<"array"<<endl;
   for(it3 = alloc_size.begin(); it3 != alloc_size.end() ; it3++){
     cout<<it3->first<<" "<<it3->second.size()<<endl;
+  }
+  map<string,int>::iterator it11;
+  for(it11 = tag_location.begin();it11 != tag_location.end(); it11++){
+    cout<<"check tag\ntag_location: " << it11->first << ", " << it11->second<<endl;
   }
 }
 
@@ -170,6 +178,7 @@ void Visit(const koopa_raw_slice_t &slice) {
             strcat(asm_out, ", t");
             strcat(asm_out, to_string(reg).c_str());
             strcat(asm_out, "\n");
+            dpt += 4;
             params++;
           }
           else{
@@ -195,6 +204,7 @@ void Visit(const koopa_raw_slice_t &slice) {
               strcat(asm_out, ", (t");
               strcat(asm_out, to_string(spreg1).c_str());
               strcat(asm_out, ")\n");
+              dpt += 12;
             }
             else{
               strcat(asm_out, "  sw t");
@@ -202,6 +212,7 @@ void Visit(const koopa_raw_slice_t &slice) {
               strcat(asm_out, ", ");
               strcat(asm_out, to_string(200000-4*(params-7)).c_str());
               strcat(asm_out, "(sp)\n");
+              dpt += 4;
               
             }
             params++;
@@ -234,9 +245,14 @@ void Visit(const koopa_raw_function_t &func) {
   strcat(asm_out, "\n");
   strcat(asm_out, func->name+1);
   strcat(asm_out,":\n");
-    strcat(asm_out, "  li t0, 200000\n");
+  strcat(asm_out, "  li t0, 200000\n");
   strcat(asm_out, "  sub sp, sp, t0\n");
   strcat(asm_out, "  sw ra, 0(sp)\n");
+  string tmptag = func->name + 1;
+  qcur_func = tmptag;
+  dpt = 0;
+  tag_location[tmptag] = dpt;
+  dpt = 12;
   sp_max+=4;
   Visit(func->params);
   // 访问所有基本块
@@ -263,11 +279,17 @@ void Visit(const koopa_raw_function_t &func) {
 void Visit(const koopa_raw_basic_block_t &bb) {
   cout<<"in block"<<endl;
   // 执行一些其他的必要操作
+  string tmptag = bb->name + 1;
   if(strcmp(bb->name,"%entry") == 0){
   }
   else{
     strcat(asm_out,bb->name + 1);
     strcat(asm_out,":\n");
+    tag_location[tmptag] = dpt;
+  }
+  map<string,int>::iterator it1;
+  for(it1 = tag_location.begin();it1 != tag_location.end(); it1++){
+    cout<<"check tag\ntag_location: " << it1->first << ", " << it1->second<<endl;
   }
   std::cout<<"in visit block, instlen:"<<bb->insts.len<<" paramslen:"<<bb->params.len<<endl;
   // 访问所有指令
@@ -314,6 +336,7 @@ void Visit(const koopa_raw_value_t &value) {
         strcat(asm_out, ", (t");
         strcat(asm_out, to_string(spreg1).c_str());
         strcat(asm_out, ")\n");
+        dpt += 12;
       }
       else{
         strcat(asm_out, "  lw t");
@@ -321,6 +344,7 @@ void Visit(const koopa_raw_value_t &value) {
         strcat(asm_out, ", ");
         strcat(asm_out, to_string(saved_bin_stack[value]).c_str());
         strcat(asm_out, "(sp)\n");
+        dpt += 4;
       }
       calstack.push(reg);
     cout<<"in value in stored has ended"<<endl;
@@ -374,6 +398,7 @@ void Visit(const koopa_raw_value_t &value) {
           strcat(asm_out, ", (t");
           strcat(asm_out, to_string(spreg1).c_str());
           strcat(asm_out, ")\n");
+          dpt += 12;
         }
         else{
           strcat(asm_out, "  lw t");
@@ -381,12 +406,14 @@ void Visit(const koopa_raw_value_t &value) {
           strcat(asm_out, ", ");
           strcat(asm_out, to_string(alloc_pos[name]).c_str());
           strcat(asm_out, "(sp)\n");
+          dpt += 4;
         }
       }
       else{
         strcat(asm_out, "  la t");
         strcat(asm_out, to_string(reg2).c_str());
         strcat(asm_out, ", var\n");
+        dpt += 4;
 
         if(-4-alloc_pos[name] >= 1024){
           strcat(asm_out, "  li t");
@@ -409,6 +436,7 @@ void Visit(const koopa_raw_value_t &value) {
           strcat(asm_out, "(t");
           strcat(asm_out, to_string(reg2).c_str());
           strcat(asm_out, ")\n");
+          dpt += 12;
         }
         else{
           strcat(asm_out, "  lw t");
@@ -418,6 +446,7 @@ void Visit(const koopa_raw_value_t &value) {
           strcat(asm_out, "(t");
           strcat(asm_out, to_string(reg2).c_str());
           strcat(asm_out, ")\n");
+          dpt += 4;
         }
 
       }
@@ -474,6 +503,7 @@ void Visit(const koopa_raw_value_t &value) {
             strcat(asm_out, ", (t");
             strcat(asm_out, to_string(spreg1).c_str());
             strcat(asm_out, ")\n");
+            dpt += 12;
           }
           else{
             strcat(asm_out, "  sw t");
@@ -481,6 +511,7 @@ void Visit(const koopa_raw_value_t &value) {
             strcat(asm_out, ", ");
             strcat(asm_out, to_string(saved_bin_stack[value]).c_str());
             strcat(asm_out, "(sp)\n");
+            dpt += 4;
           }
 
           used[calstack.top()] = 0;
@@ -518,6 +549,7 @@ void Visit(const koopa_raw_value_t &value) {
               strcat(asm_out, ", (t");
               strcat(asm_out, to_string(spreg1).c_str());
               strcat(asm_out, ")\n");
+              dpt += 12;
             }
             else{
               strcat(asm_out, "  lw t");
@@ -525,6 +557,7 @@ void Visit(const koopa_raw_value_t &value) {
               strcat(asm_out, ", ");
               strcat(asm_out, to_string(saved_bin_stack[value]).c_str());
               strcat(asm_out, "(sp)\n");
+              dpt += 4;
             }
             calstack.push(reg);
         }
@@ -715,6 +748,7 @@ void Visit(const koopa_raw_value_t &value) {
             strcat(asm_out, ", (t");
             strcat(asm_out, to_string(spreg1).c_str());
             strcat(asm_out, ")\n");
+            dpt += 12;
           }
           else{
             strcat(asm_out, "  sw t");
@@ -722,6 +756,7 @@ void Visit(const koopa_raw_value_t &value) {
             strcat(asm_out, ", ");
             strcat(asm_out, to_string(sp_max).c_str());
             strcat(asm_out, "(sp)\n");
+            dpt += 4;
           }
           used[reg] = 0;
           sp_max+=4;
@@ -762,6 +797,7 @@ void Visit(const koopa_raw_value_t &value) {
             strcat(asm_out, ", (t");
             strcat(asm_out, to_string(spreg1).c_str());
             strcat(asm_out, ")\n");
+            dpt += 12;
           }
           else{
             strcat(asm_out, "  sw t");
@@ -769,6 +805,7 @@ void Visit(const koopa_raw_value_t &value) {
             strcat(asm_out, ", ");
             strcat(asm_out, to_string(saved_bin_stack[value]).c_str());
             strcat(asm_out, "(sp)\n");
+            dpt += 4;
           }
 
           used[calstack.top()] = 0;
@@ -803,6 +840,7 @@ void Visit(const koopa_raw_value_t &value) {
             strcat(asm_out, ", (t");
             strcat(asm_out, to_string(spreg1).c_str());
             strcat(asm_out, ")\n");
+            dpt += 12;
           }
           else{
             strcat(asm_out, "  sw a");
@@ -810,6 +848,7 @@ void Visit(const koopa_raw_value_t &value) {
             strcat(asm_out, ", ");
             strcat(asm_out, to_string(sp_max).c_str());
             strcat(asm_out, "(sp)\n");
+            dpt += 4;
           }
           alloc_pos[value->name] = sp_max;
           sp_max += 4;
@@ -842,6 +881,7 @@ void Visit(const koopa_raw_value_t &value) {
             strcat(asm_out, ", (t");
             strcat(asm_out, to_string(spreg1).c_str());
             strcat(asm_out, ")\n");
+            dpt += 12;
 
             for(int i = 0 ; i < 7 ; i ++){
               if(!used[i]){spreg1 = i;break;}
@@ -863,6 +903,7 @@ void Visit(const koopa_raw_value_t &value) {
             strcat(asm_out, ", (t");
             strcat(asm_out, to_string(spreg1).c_str());
             strcat(asm_out, ")\n");
+            dpt += 12;
           }
           else{
             strcat(asm_out, "  lw t");
@@ -876,6 +917,7 @@ void Visit(const koopa_raw_value_t &value) {
             strcat(asm_out, ", ");
             strcat(asm_out, to_string(sp_max).c_str());
             strcat(asm_out, "(sp)\n");
+            dpt += 8;
           }
           used[tmp] = 0;
           alloc_pos[value->name] = sp_max;
@@ -928,14 +970,16 @@ void Visit(const koopa_raw_value_t &value) {
               strcat(asm_out, to_string(tmp1).c_str());
               strcat(asm_out, ", sp, t");  
               strcat(asm_out, to_string(tmp3).c_str());
-              strcat(asm_out, "\n");    
+              strcat(asm_out, "\n");   
+              dpt += 8; 
             }
             else{
               strcat(asm_out, "  addi t");
               strcat(asm_out, to_string(tmp1).c_str());
               strcat(asm_out, ", sp, ");               
               strcat(asm_out, to_string(alloc_pos[sname]).c_str());
-              strcat(asm_out, "\n");      
+              strcat(asm_out, "\n");  
+              dpt += 4;    
 
             }                        
 
@@ -946,12 +990,14 @@ void Visit(const koopa_raw_value_t &value) {
             strcat(asm_out, ", "); 
             strcat(asm_out, to_string(shift).c_str());
             strcat(asm_out, "\n"); 
+            dpt += 4;
           }
           else{
 
             strcat(asm_out, "  la t");
             strcat(asm_out, to_string(tmp2).c_str());
             strcat(asm_out, ", var\n"); 
+            dpt += 4;
 
             if(-4-alloc_pos[sname] >= 1024){
               strcat(asm_out, "  li t");
@@ -966,7 +1012,8 @@ void Visit(const koopa_raw_value_t &value) {
               strcat(asm_out, to_string(tmp2).c_str());                   
               strcat(asm_out, ", t");   
               strcat(asm_out, to_string(tmp3).c_str());    
-              strcat(asm_out, "\n");   
+              strcat(asm_out, "\n");  
+              dpt += 8; 
             }
             else{
               strcat(asm_out, "  addi t");
@@ -976,6 +1023,7 @@ void Visit(const koopa_raw_value_t &value) {
               strcat(asm_out, ", ");                             
               strcat(asm_out, to_string(-4-alloc_pos[sname]).c_str());  
               strcat(asm_out, "\n"); 
+              dpt += 4;
             }
 
             used[tmp3] = 0;   
@@ -985,6 +1033,7 @@ void Visit(const koopa_raw_value_t &value) {
             strcat(asm_out, ", "); 
             strcat(asm_out, to_string(shift).c_str());
             strcat(asm_out, "\n"); 
+            dpt += 4;
 
           }
           saved_vec = tmp_array_size;
@@ -1009,6 +1058,7 @@ void Visit(const koopa_raw_value_t &value) {
           strcat(asm_out, ", t"); 
           strcat(asm_out, to_string(tmp2).c_str());
           strcat(asm_out, "\n"); 
+          dpt += 8;
           if(sp_max > 1024){
             int spreg1 = 0;
             for(int i = 0 ; i < 7 ; i ++){
@@ -1034,6 +1084,7 @@ void Visit(const koopa_raw_value_t &value) {
             strcat(asm_out, ", (t");
             strcat(asm_out, to_string(spreg1).c_str());
             strcat(asm_out, ")\n");
+            dpt += 12;
           }
           else{
             used[tmp2] = 0;
@@ -1044,6 +1095,7 @@ void Visit(const koopa_raw_value_t &value) {
             strcat(asm_out, ", ");
             strcat(asm_out, to_string(sp_max).c_str());
             strcat(asm_out, "(sp)\n");
+            dpt += 4;
           }
           check_info();
           saved_bin_stack[value] = sp_max;
@@ -1082,6 +1134,7 @@ void Visit(const koopa_raw_value_t &value) {
           strcat(asm_out, ", "); 
           strcat(asm_out, to_string(shift).c_str());
           strcat(asm_out, "\n"); 
+          dpt += 8;
           saved_vec = tmp_array_size;
           cout<<"going to checking index"<<endl;  
           Visit(value->kind.data.get_elem_ptr.index);
@@ -1106,6 +1159,7 @@ void Visit(const koopa_raw_value_t &value) {
           strcat(asm_out, ", t"); 
           strcat(asm_out, to_string(tmp2).c_str());
           strcat(asm_out, "\n"); 
+          dpt += 8;
           if(sp_max > 1024){
             int spreg1 = 0;
             for(int i = 0 ; i < 7 ; i ++){
@@ -1131,6 +1185,7 @@ void Visit(const koopa_raw_value_t &value) {
             strcat(asm_out, ", (t");
             strcat(asm_out, to_string(spreg1).c_str());
             strcat(asm_out, ")\n");
+            dpt += 12;
           }
           else{
             used[tmp2] = 0;
@@ -1141,6 +1196,7 @@ void Visit(const koopa_raw_value_t &value) {
             strcat(asm_out, ", ");
             strcat(asm_out, to_string(sp_max).c_str());
             strcat(asm_out, "(sp)\n");
+            dpt += 4;
           }
           saved_bin_stack[value] = sp_max;
           sp_max += 4;
@@ -1188,7 +1244,8 @@ void Visit(const koopa_raw_value_t &value) {
               strcat(asm_out, to_string(tmp1).c_str());
               strcat(asm_out, ", sp, t");                             
               strcat(asm_out, to_string(tmp3).c_str());
-              strcat(asm_out, "\n");      
+              strcat(asm_out, "\n");   
+              dpt += 8;   
            
             }
             else{
@@ -1197,6 +1254,7 @@ void Visit(const koopa_raw_value_t &value) {
               strcat(asm_out, ", sp,");                             
               strcat(asm_out, to_string(alloc_pos[sname]).c_str());
               strcat(asm_out, "\n");   
+              dpt += 4;    
             }         
             used[tmp3] = 0;  
 
@@ -1205,11 +1263,13 @@ void Visit(const koopa_raw_value_t &value) {
             strcat(asm_out, ", "); 
             strcat(asm_out, to_string(shift).c_str());
             strcat(asm_out, "\n"); 
+            dpt += 4;
           }
           else{
             strcat(asm_out, "  la t");
             strcat(asm_out, to_string(tmp2).c_str());
             strcat(asm_out, ", var\n"); 
+            dpt += 4;
             if(-4-alloc_pos[sname] >= 1024){
 
               strcat(asm_out, "  li t");
@@ -1225,6 +1285,7 @@ void Visit(const koopa_raw_value_t &value) {
               strcat(asm_out, ", t");                             
               strcat(asm_out, to_string(tmp3).c_str());  
               strcat(asm_out, "\n");    
+              dpt += 8;
             }
             else{
               strcat(asm_out, "  addi t");
@@ -1233,7 +1294,8 @@ void Visit(const koopa_raw_value_t &value) {
               strcat(asm_out, to_string(tmp2).c_str());   
               strcat(asm_out, ", ");                             
               strcat(asm_out, to_string(-4-alloc_pos[sname]).c_str());  
-              strcat(asm_out, "\n");    
+              strcat(asm_out, "\n");   
+              dpt += 4;   
             }  
 
             used[tmp3] = 0;
@@ -1243,6 +1305,7 @@ void Visit(const koopa_raw_value_t &value) {
             strcat(asm_out, ", "); 
             strcat(asm_out, to_string(shift).c_str());
             strcat(asm_out, "\n"); 
+            dpt += 4;
           }
           saved_vec = tmp_array_size;
           Visit(value->kind.data.get_elem_ptr.index);
@@ -1266,6 +1329,7 @@ void Visit(const koopa_raw_value_t &value) {
           strcat(asm_out, ", t"); 
           strcat(asm_out, to_string(tmp2).c_str());
           strcat(asm_out, "\n"); 
+          dpt += 8;
           if(sp_max > 1024){
             int spreg1 = 0;
             for(int i = 0 ; i < 7 ; i ++){
@@ -1288,6 +1352,7 @@ void Visit(const koopa_raw_value_t &value) {
             strcat(asm_out, ", (t");
             strcat(asm_out, to_string(spreg1).c_str());
             strcat(asm_out, ")\n");
+            dpt += 12;
           }
           else{
             strcat(asm_out, "  sw t");
@@ -1295,6 +1360,7 @@ void Visit(const koopa_raw_value_t &value) {
             strcat(asm_out, ", ");
             strcat(asm_out, to_string(sp_max).c_str());
             strcat(asm_out, "(sp)\n");
+            dpt += 4;
           }
           used[tmp2] = 0;
           used[ttype] = 0;
@@ -1335,6 +1401,7 @@ void Visit(const koopa_raw_value_t &value) {
           strcat(asm_out, ", "); 
           strcat(asm_out, to_string(shift).c_str());
           strcat(asm_out, "\n"); 
+          dpt += 8;
           saved_vec = tmp_array_size;
           Visit(value->kind.data.get_elem_ptr.index);
           cout<<"finish parsing index %"<<endl;  
@@ -1358,6 +1425,7 @@ void Visit(const koopa_raw_value_t &value) {
           strcat(asm_out, ", t"); 
           strcat(asm_out, to_string(tmp2).c_str());
           strcat(asm_out, "\n"); 
+          dpt += 8;
           if(sp_max > 1024){
             int spreg1 = 0;
             for(int i = 0 ; i < 7 ; i ++){
@@ -1380,6 +1448,7 @@ void Visit(const koopa_raw_value_t &value) {
             strcat(asm_out, ", (t");
             strcat(asm_out, to_string(spreg1).c_str());
             strcat(asm_out, ")\n");
+            dpt += 12;
           }
           else{
             strcat(asm_out, "  sw t");
@@ -1387,6 +1456,7 @@ void Visit(const koopa_raw_value_t &value) {
             strcat(asm_out, ", ");
             strcat(asm_out, to_string(sp_max).c_str());
             strcat(asm_out, "(sp)\n");
+            dpt += 4;
           }
 
           used[tmp2] = 0;
@@ -1446,11 +1516,13 @@ void Visit(const koopa_raw_call_t &call){
   strcat(asm_out, "  call ");
   strcat(asm_out, call.callee->name + 1);
   strcat(asm_out, "\n");
+  dpt += 4;
   for(int i = 0 ; i < 7 ;i ++){
     if(used[i] == 0){
       strcat(asm_out, "  add t");
       strcat(asm_out, to_string(i).c_str());
       strcat(asm_out, ", zero, a0\n");
+      dpt += 4;
       used[i] = 1;
       calstack.push(i);
       break;
@@ -1464,14 +1536,79 @@ void Visit(const koopa_raw_branch_t &branch){
   Visit(branch.cond);
   int reg = calstack.top();
   calstack.pop();
-  strcat(asm_out, "  bnez t");
-  strcat(asm_out, to_string(reg).c_str());
-  strcat(asm_out, ", ");
-  strcat(asm_out, branch.true_bb->name + 1);
-  strcat(asm_out, "\n");
-  strcat(asm_out, "  j ");
-  strcat(asm_out, branch.false_bb->name + 1);
-  strcat(asm_out, "\n");
+  int tmp1 = 0;
+  for(int i = 0 ; i < 7 ; i ++){
+    if(used[i] == 0){
+      used[i] = 1;
+      tmp1 = i;
+      break;
+    }
+  }
+  int tmp2 = 0;
+  for(int i = 0 ; i < 7 ; i ++){
+    if(used[i] == 0){
+      used[i] = 1;
+      tmp2 = i;
+      break;
+    }
+  }
+  string tbbn = branch.true_bb->name + 1;
+  string fbbn = branch.false_bb->name + 1;
+  if(1){
+    strcat(asm_out, "  la t");
+    strcat(asm_out, to_string(tmp1).c_str());
+    strcat(asm_out, ", ");
+    strcat(asm_out, tbbn.c_str());
+    strcat(asm_out, "\n");
+
+    strcat(asm_out, "  beqz t");
+    strcat(asm_out, to_string(reg).c_str());
+    strcat(asm_out, ", branch_tmp_");
+    strcat(asm_out, to_string(tmpbj).c_str());
+    strcat(asm_out, "\n");
+
+    strcat(asm_out, "  jr t");
+    strcat(asm_out, to_string(tmp1).c_str());
+    strcat(asm_out, "\n");
+
+    strcat(asm_out, "branch_tmp_");
+    strcat(asm_out, to_string(tmpbj).c_str());
+    strcat(asm_out, ":\n");
+    tmpbj += 1;
+    dpt += 16;
+  }
+  else{
+    strcat(asm_out, "  bnez t");
+    strcat(asm_out, to_string(reg).c_str());
+    strcat(asm_out, ", ");
+    strcat(asm_out, tbbn.c_str());
+    strcat(asm_out, "\n");
+  }
+  used[tmp1] = 0;
+  used[tmp2] = 0;
+
+  if(1){
+    strcat(asm_out, "  la t");
+    strcat(asm_out, to_string(tmp1).c_str());
+    strcat(asm_out, ", ");
+    strcat(asm_out, fbbn.c_str());
+    strcat(asm_out, "\n");
+
+    strcat(asm_out, "  jr t");
+    strcat(asm_out, to_string(tmp1).c_str());
+    strcat(asm_out, "\n");
+    dpt += 8;
+  }
+  else{
+    strcat(asm_out, "  j ");
+    strcat(asm_out, fbbn.c_str());
+    strcat(asm_out, "\n");
+    dpt += 4;
+  }
+  used[tmp1] = 0;
+  used[tmp2] = 0;
+
+
   used[reg] = 0;
 }
 
@@ -1479,10 +1616,44 @@ void Visit(const koopa_raw_jump_t &jmp){
   cout<<"in jmp"<<endl;
   cout<<jmp.target->name<<endl;
   char name[20];
-  strcpy(name, jmp.target->name + 1);
-  strcat(asm_out, "  j ");
-  strcat(asm_out, name);
-  strcat(asm_out, "\n");
+  int tmp1 = 0;
+  for(int i = 0 ; i < 7 ; i ++){
+    if(used[i] == 0){
+      used[i] = 1;
+      tmp1 = i;
+      break;
+    }
+  }
+  int tmp2 = 0;
+  for(int i = 0 ; i < 7 ; i ++){
+    if(used[i] == 0){
+      used[i] = 1;
+      tmp2 = i;
+      break;
+    }
+  }
+  string jn = jmp.target->name + 1;
+  if(1){
+    strcat(asm_out, "  la t");
+    strcat(asm_out, to_string(tmp1).c_str());
+    strcat(asm_out, ", ");
+    strcat(asm_out, jn.c_str());
+    strcat(asm_out, "\n");
+
+    strcat(asm_out, "  jr t");
+    strcat(asm_out, to_string(tmp1).c_str());
+    strcat(asm_out, "\n");
+    dpt += 8;
+  }
+  else{
+    strcpy(name, jn.c_str());
+    strcat(asm_out, "  j ");
+    strcat(asm_out, name);
+    strcat(asm_out, "\n");
+    dpt += 4;
+  }
+  used[tmp1] = 0;
+  used[tmp2] = 0;
 }
 
 void Visit(const koopa_raw_integer_t &intval){
@@ -1498,6 +1669,7 @@ void Visit(const koopa_raw_integer_t &intval){
         strcat(asm_out,", ");
         strcat(asm_out, to_string(intval.value).c_str());
         strcat(asm_out, "\n");
+        dpt += 4;
         calstack.push(i);
       }
       else{
@@ -1525,12 +1697,14 @@ void Visit(const koopa_raw_return_t &ret){
     strcat(asm_out, "  li t0, 200000\n");
     strcat(asm_out, "  add sp, sp, t0\n");
     strcat(asm_out,"  ret\n");
+    dpt += 8;
   }
   else{
     strcat(asm_out, "  lw ra, 0(sp)\n");
     strcat(asm_out, "  li t0, 200000\n");
     strcat(asm_out, "  add sp, sp, t0\n");
     strcat(asm_out,"  ret\n");
+    dpt += 4;
   }
 }
 
@@ -1564,6 +1738,7 @@ void Visit(const koopa_raw_binary_op_t &op){
       strcat(asm_out,", t");
       strcat(asm_out,to_string(p2).c_str());
       strcat(asm_out,"\n");
+      dpt += 8;
       used[p1] = 0;
       break;
     }
@@ -1589,6 +1764,7 @@ void Visit(const koopa_raw_binary_op_t &op){
       strcat(asm_out,", t");
       strcat(asm_out,to_string(p2).c_str());
       strcat(asm_out,"\n");
+      dpt += 8;
       used[p1] = 0;
       break;
     }
@@ -1607,6 +1783,7 @@ void Visit(const koopa_raw_binary_op_t &op){
       strcat(asm_out,", t");
       strcat(asm_out,to_string(p1).c_str());
       strcat(asm_out,"\n");
+      dpt += 4;
       used[p1] = 0;
       break;
     }
@@ -1625,6 +1802,7 @@ void Visit(const koopa_raw_binary_op_t &op){
       strcat(asm_out,", t");
       strcat(asm_out,to_string(p1).c_str());
       strcat(asm_out,"\n");
+      dpt += 4;
       used[p1] = 0;
       break;
     }
@@ -1676,6 +1854,7 @@ void Visit(const koopa_raw_binary_op_t &op){
       strcat(asm_out,", t");
       strcat(asm_out,to_string(p1).c_str());
       strcat(asm_out,"\n");
+      dpt += 16;
       used[p1] = 0;
       used[tmp1] = 0;
       break;
@@ -1728,6 +1907,7 @@ void Visit(const koopa_raw_binary_op_t &op){
       strcat(asm_out,", t");
       strcat(asm_out,to_string(p2).c_str());
       strcat(asm_out,"\n");
+      dpt += 16;
       used[p1] = 0;
       used[tmp1] = 0;
       break;
@@ -1747,6 +1927,7 @@ void Visit(const koopa_raw_binary_op_t &op){
       strcat(asm_out,", t");
       strcat(asm_out,to_string(p2).c_str());
       strcat(asm_out,"\n");
+      dpt += 4;
       used[p1] = 0;
       break;
     }
@@ -1764,6 +1945,7 @@ void Visit(const koopa_raw_binary_op_t &op){
       strcat(asm_out,", t");
       strcat(asm_out,to_string(p1).c_str());
       strcat(asm_out,"\n");
+      dpt += 4;
       used[p1] = 0;
       break;
     }
@@ -1782,6 +1964,7 @@ void Visit(const koopa_raw_binary_op_t &op){
       strcat(asm_out,", t");
       strcat(asm_out,to_string(p2).c_str());
       strcat(asm_out,"\n");
+      dpt += 4;
       used[p1] = 0;
       break;
     }
@@ -1800,6 +1983,7 @@ void Visit(const koopa_raw_binary_op_t &op){
       strcat(asm_out,", t");
       strcat(asm_out,to_string(p1).c_str());
       strcat(asm_out,"\n");
+      dpt += 4;
       used[p1] = 0;
       break;
     }
@@ -1844,6 +2028,7 @@ void Visit(const koopa_raw_binary_op_t &op){
       strcat(asm_out,", t");
       strcat(asm_out,to_string(p1).c_str());
       strcat(asm_out,"\n");
+      dpt += 12;
       used[p1] = 0;
       used[tmp1] = 0;
       break;
@@ -1863,6 +2048,7 @@ void Visit(const koopa_raw_binary_op_t &op){
       strcat(asm_out,", t");
       strcat(asm_out,to_string(p2).c_str());
       strcat(asm_out,"\n");
+      dpt += 4;
       used[p1] = 0;
       break;
     }
@@ -1881,6 +2067,7 @@ void Visit(const koopa_raw_binary_op_t &op){
       strcat(asm_out,", t");
       strcat(asm_out,to_string(p2).c_str());
       strcat(asm_out,"\n");
+      dpt += 4;
       used[p1] = 0;
       break;
     }
@@ -1899,6 +2086,7 @@ void Visit(const koopa_raw_binary_op_t &op){
       strcat(asm_out,", t");
       strcat(asm_out,to_string(p2).c_str());
       strcat(asm_out,"\n");
+      dpt += 4;
       used[p1] = 0;
       break;
     }
@@ -1967,6 +2155,7 @@ void Visit(const koopa_raw_store_t &store){
           strcat(asm_out, ", (t");
           strcat(asm_out, to_string(spreg1).c_str());
           strcat(asm_out, ")\n");
+          dpt += 12;
         }
         else{
           strcat(asm_out, "  sw t");
@@ -1974,6 +2163,7 @@ void Visit(const koopa_raw_store_t &store){
           strcat(asm_out, ", ");
           strcat(asm_out, to_string(alloc_pos[sname]).c_str());
           strcat(asm_out, "(sp)\n");
+          dpt += 4;
         }
 
       }
@@ -1981,6 +2171,7 @@ void Visit(const koopa_raw_store_t &store){
         strcat(asm_out, "  la t");
         strcat(asm_out, to_string(reg).c_str());
         strcat(asm_out, ", var\n");
+        dpt += 4;
         if(-4-alloc_pos[sname] < 1024){
           strcat(asm_out, "  sw t");
           strcat(asm_out, to_string(loadreg).c_str());
@@ -1989,6 +2180,7 @@ void Visit(const koopa_raw_store_t &store){
           strcat(asm_out, "(t");
           strcat(asm_out, to_string(reg).c_str());
           strcat(asm_out, ")\n");
+          dpt += 4;
         }
         else{
           strcat(asm_out, "  li t");
@@ -2011,6 +2203,7 @@ void Visit(const koopa_raw_store_t &store){
           strcat(asm_out, "(t");
           strcat(asm_out, to_string(reg).c_str());
           strcat(asm_out, ")\n");
+          dpt += 12;
         }
       }
       
@@ -2042,6 +2235,7 @@ void Visit(const koopa_raw_store_t &store){
       strcat(asm_out, ", (t");
       strcat(asm_out, to_string(destreg).c_str());
       strcat(asm_out, ")\n");
+      dpt += 4;
       
       used[reg] = 0;
       used[loadreg] = 0;
@@ -2114,6 +2308,7 @@ void Visit(const koopa_raw_load_t &load){
           strcat(asm_out, ", (t");
           strcat(asm_out, to_string(spreg1).c_str());
           strcat(asm_out, ")\n");
+          dpt += 12;
         }
         else{
           if(alloc_size.find(sname) != alloc_size.end() && !(alloc_size[sname].size() == 0)){
@@ -2131,12 +2326,14 @@ void Visit(const koopa_raw_load_t &load){
           strcat(asm_out, ", ");
           strcat(asm_out, to_string(alloc_pos[sname]).c_str());
           strcat(asm_out, "(sp)\n");
+          dpt += 4;
         }
       }
       else{
         strcat(asm_out, "  la t");
         strcat(asm_out, to_string(reg2).c_str());
         strcat(asm_out, ", var\n");
+         dpt += 4;
 
         if(-4-alloc_pos[sname] < 1024){
           strcat(asm_out, "  lw t");
@@ -2146,6 +2343,7 @@ void Visit(const koopa_raw_load_t &load){
           strcat(asm_out, "(t");
           strcat(asm_out, to_string(reg2).c_str());
           strcat(asm_out, ")\n");
+          dpt += 4;  
         }
         else{
           strcat(asm_out, "  li t");
@@ -2168,6 +2366,7 @@ void Visit(const koopa_raw_load_t &load){
           strcat(asm_out, "(t");
           strcat(asm_out, to_string(reg2).c_str());
           strcat(asm_out, ")\n");
+          dpt += 12;
         }
       }
       used[reg2] = 0;
@@ -2183,6 +2382,7 @@ void Visit(const koopa_raw_load_t &load){
       strcat(asm_out, ", (t");
       strcat(asm_out, to_string(ttype).c_str());
       strcat(asm_out, ")\n");
+      dpt += 4;
 
       used[ttype] = 0;
       used[reg2] = 0;
